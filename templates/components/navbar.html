@@ -1,0 +1,41 @@
+<nav class="bg-blue-900 text-white shadow-lg">
+    <div class="mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+            <div class="flex items-center">
+                <a href="{% if user.rol == 'ADMIN' %}/dashboard/admin/{% elif user.rol == 'SUPERVISOR' %}/dashboard/supervisor/{% else %}/dashboard/trabajador/{% endif %}" class="text-2xl font-bold">
+                    🛡️ Charlas de Seguridad
+                </a>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                <!-- Usuario info -->
+                <div class="flex items-center space-x-2">
+                    <div class="text-right">
+                        <p class="text-sm font-medium">{{ user.get_full_name }}</p>
+                        <p class="text-xs text-blue-300">
+                            {% if user.rol == 'ADMIN' %}🛡️ Administrador
+                            {% elif user.rol == 'SUPERVISOR' %}👷 Supervisor
+                            {% else %}👤 Trabajador
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Logout -->
+                <button 
+                    onclick="logout()" 
+                    class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition">
+                    Cerrar Sesión
+                </button>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<script>
+    function logout() {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        window.location.href = '/login/';
+    }
+</script>

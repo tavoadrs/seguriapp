@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard Supervisor{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-xl shadow-md p-6">
+        <h1 class="text-3xl font-bold text-gray-900">Dashboard Supervisor</h1>
+        <p class="text-gray-600">Gestión de charlas de seguridad</p>
+    </div>
+    
+    <!-- Acciones Rápidas -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <a href="/charlas/crear/" class="bg-blue-600 hover:bg-blue-700 text-white rounded-xl p-6 transition group">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-blue-100">Crear</p>
+                    <p class="text-2xl font-bold mt-2">Nueva Charla</p>
+                </div>
+                <div class="text-5xl group-hover:scale-110 transition">➕</div>
+            </div>
+        </a>
+        
+        <a href="/charlas/" class="bg-green-600 hover:bg-green-700 text-white rounded-xl p-6 transition group">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-green-100">Ver</p>
+                    <p class="text-2xl font-bold mt-2">Mis Charlas</p>
+                </div>
+                <div class="text-5xl group-hover:scale-110 transition">📚</div>
+            </div>
+        </a>
+        
+        <a href="/reportes/" class="bg-purple-600 hover:bg-purple-700 text-white rounded-xl p-6 transition group">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-purple-100">Gestionar</p>
+                    <p class="text-2xl font-bold mt-2">Reportes PDF</p>
+                </div>
+                <div class="text-5xl group-hover:scale-110 transition">📄</div>
+            </div>
+        </a>
+    </div>
+    
+    <!-- Mis Charlas Recientes -->
+    <div class="bg-white rounded-xl shadow-md p-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">Mis Charlas Recientes</h2>
+        
+        <div 
+            id="mis-charlas"
+            hx-get="/api/charlas/?page_size=5"
+            hx-trigger="load"
+            hx-headers='{"Authorization": "Bearer " + localStorage.getItem("access_token")}'
+            class="space-y-4">
+            
+            <!-- Loading -->
+            <div class="text-center py-8">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Control de Accesos Hoy -->
+    <div class="bg-white rounded-xl shadow-md p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold text-gray-900">Control de Accesos - Hoy</h2>
+            <button 
+                hx-get="/api/accesos/accesos_hoy/"
+                hx-trigger="click"
+                hx-target="#accesos-hoy"
+                hx-headers='{"Authorization": "Bearer " + localStorage.getItem("access_token")}'
+                class="text-blue-600 hover:text-blue-700 font-medium">
+                🔄 Actualizar
+            </button>
+        </div>
+        
+        <div 
+            id="accesos-hoy"
+            hx-get="/api/accesos/accesos_hoy/"
+            hx-trigger="load, every 30s"
+            hx-headers='{"Authorization": "Bearer " + localStorage.getItem("access_token")}'
+            class="overflow-x-auto">
+            
+            <!-- Loading -->
+            <div class="text-center py-8">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.body.addEventListener('htmx:afterSwap', function(evt) {
+        if (evt.detail.target.id === 'mis-charlas') {
+            const response = JSON.parse(evt.detail.xhr.responseText);
+            
+            if (response.results && response.results.length > 0) {
+                evt.detail.target.innerHTML = response.results.map(charla => `
+                    <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <h3 class="font-bold text-lg text-gray-900">${charla.tema}</h3>
+                                <p class="text-gray-600 text-sm mt-1">
+                                    📅 ${charla.fecha} - ⏰ ${charla.hora}
+                                </p>
+                            </div>
+                            <a href="/charlas/${charla.id}/" 
+                               class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition">
+                                Ver Detalles →
+                            </a>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                evt.detail.target.innerHTML = '<p class="text-center text-gray-600 py-8">No tienes charlas registradas</p>';
+            }
+        }
+        
+        if (evt.detail.target.id === 'accesos-hoy') {
+            const accesos = JSON.parse(evt.detail.xhr.responseText);
+            
+            if (accesos.length > 0) {
+                evt.detail.target.innerHTML = `
+                    <table class="min-w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Usuario</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Entrada</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Salida</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            ${accesos.map(acceso => `
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-6 py-4 text-sm text-gray-900 font-medium">
+                                        ${acceso.usuario_detalle.first_name} ${acceso.usuario_detalle.last_name}
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-600">
+                                        ${new Date(acceso.hora_entrada).toLocaleTimeString()}
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-600">
+                                        ${acceso.hora_salida ? new Date(acceso.hora_salida).toLocaleTimeString() : '-'}
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <span class="px-3 py-1 rounded-full text-xs font-bold ${
+                                            acceso.hora_salida ? 'bg-gray-100 text-gray-800' : 'bg-green-100 text-green-800'
+                                        }">
+                                            ${acceso.hora_salida ? '🔴 Salió' : '🟢 En sitio'}
+                                        </span>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } else {
+                evt.detail.target.innerHTML = '<p class="text-center text-gray-600 py-8">No hay accesos registrados hoy</p>';
+            }
+        }
+    });
+</script>
+{% endblock %}

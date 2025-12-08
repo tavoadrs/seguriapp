@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard Trabajador{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-xl shadow-md p-6">
+        <h1 class="text-3xl font-bold text-gray-900">Bienvenido, {{ user.get_full_name }}</h1>
+        <p class="text-gray-600">Panel de trabajador</p>
+    </div>
+    
+    <!-- Control de Acceso -->
+    <div class="bg-white rounded-xl shadow-md p-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">Control de Acceso</h2>
+        
+        <div class="flex space-x-4">
+            <button 
+                hx-post="/api/accesos/registrar_entrada/"
+                hx-headers='{"Authorization": "Bearer " + localStorage.getItem("access_token")}'
+                hx-target="#acceso-status"
+                hx-swap="innerHTML"
+                class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-lg transition">
+                🟢 Registrar Entrada
+            </button>
+            
+            <button 
+                hx-post="/api/accesos/registrar_salida/"
+                hx-headers='{"Authorization": "Bearer " + localStorage.getItem("access_token")}'
+                hx-target="#acceso-status"
+                hx-swap="innerHTML"
+                class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-lg transition">
+                🔴 Registrar Salida
+            </button>
+        </div>
+        
+        <div id="acceso-status" class="mt-4"></div>
+    </div>
+    
+    <!-- Mis Charlas -->
+    <div class="bg-white rounded-xl shadow-md p-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">Mis Charlas</h2>
+        
+        <div 
+            id="mis-charlas"
+            hx-get="/api/charlas/"
+            hx-trigger="load"
+            hx-headers='{"Authorization": "Bearer " + localStorage.getItem("access_token")}'
+            hx-target="#mis-charlas"
+            class="space-y-4">
+            
+            <!-- Loading -->
+            <div class="text-center py-8">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Historial de Firmas -->
+    <div class="bg-white rounded-xl shadow-md p-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">Historial de Firmas</h2>
+        
+        <div 
+            id="mis-asistencias"
+            hx-get="/api/asistencias/mis_asistencias/"
+            hx-trigger="load"
+            hx-headers='{"Authorization": "Bearer " + localStorage.getItem("access_token")}'
+            hx-target="#mis-asistencias">
+            
+            <!-- Loading -->
+            <div class="text-center py-8">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.body.addEventListener('htmx:afterSwap', function(evt) {
+        if (evt.detail.target.id === 'acceso-status') {
+            const response = JSON.parse(evt.detail.xhr.responseText);
+            if (evt.detail.xhr.status === 201 || evt.detail.xhr.status === 200) {
+                evt.detail.target.innerHTML = `
+                    <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+                        ✅ ${response.hora_salida ? 'Salida registrada' : 'Entrada registrada'} exitosamente
+                    </div>
+                `;
+            }
+        }
+        
+        if (evt.detail.target.id === 'mis-charlas') {
+            const response = JSON.parse(evt.detail.xhr.responseText);
+            if (response.results && response.results.length > 0) {
+                evt.detail.target.innerHTML = response.results.map(charla => `
+                    <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-bold text-lg text-gray-900">${charla.tema}</h3>
+                                <p class="text-gray-600 text-sm mt-1">📅 ${charla.fecha} - ⏰ ${charla.hora}</p>
+                                <p class="text-gray-600 text-sm">👷 Supervisor: ${charla.supervisor_nombre}</p>
+                            </div>
+                            <a href="/charlas/${charla.id}/firmar/" 
+                               class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition">
+                                ✍️ Firmar
+                            </a>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                evt.detail.target.innerHTML = '<p class="text-center text-gray-600 py-8">No hay charlas disponibles</p>';
+            }
+        }
+        
+        if (evt.detail.target.id === 'mis-asistencias') {
+            const asistencias = JSON.parse(evt.detail.xhr.responseText);
+            if (asistencias.length > 0) {
+                evt.detail.target.innerHTML = `
+                    <table class="min-w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Charla</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hora Firma</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            ${asistencias.map(asistencia => `
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-6 py-4 text-sm text-gray-900">${asistencia.charla_detalle.tema}</td>
+                                    <td class="px-6 py-4 text-sm text-gray-600">${asistencia.charla_detalle.fecha}</td>
+                                    <td class="px-6 py-4 text-sm text-gray-600">${new Date(asistencia.hora_firma).toLocaleString()}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } else {
+                evt.detail.target.innerHTML = '<p class="text-center text-gray-600 py-8">No has firmado ninguna charla aún</p>';
+            }
+        }
+    });
+    
+    // Manejar errores
+    document.body.addEventListener('htmx:responseError', function(evt) {
+        if (evt.detail.target.id === 'acceso-status') {
+            const error = JSON.parse(evt.detail.xhr.responseText);
+            evt.detail.target.innerHTML = `
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                    ❌ ${error.error || 'Error al registrar'}
+                </div>
+            `;
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+
+{% block title %}Charlas{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">📚 Charlas de Seguridad</h1>
+            <p class="text-gray-600">Gestión de charlas</p>
+        </div>
+        
+        {% if user.rol in 'ADMIN,SUPERVISOR' %}
+        <a 
+            href="/charlas/crear/" 
+            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-bold transition">
+            ➕ Nueva Charla
+        </a>
+        {% endif %}
+    </div>
+    
+    <!-- Filtros -->
+    <div class="bg-white rounded-xl shadow-md p-4">
+        <div class="flex space-x-4">
+            <input 
+                type="text" 
+                id="search-input"
+                placeholder="Buscar por tema..."
+                class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                hx-get="/api/charlas/"
+                hx-trigger="keyup changed delay:500ms"
+                hx-target="#charlas-list"
+                hx-include="[name='fecha']"
+                hx-headers='{"Authorization": "Bearer " + localStorage.getItem("access_token")}'>
+            
+            <input 
+                type="date" 
+                name="fecha"
+                class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                hx-get="/api/charlas/"
+                hx-trigger="change"
+                hx-target="#charlas-list"
+                hx-include="#search-input"
+                hx-headers='{"Authorization": "Bearer " + localStorage.getItem("access_token")}'>
+        </div>
+    </div>
+    
+    <!-- Lista de Charlas -->
+    <div class="bg-white rounded-xl shadow-md p-6">
+        <div 
+            id="charlas-list"
+            hx-get="/api/charlas/"
+            hx-trigger="load"
+            hx-headers='{"Authorization": "Bearer " + localStorage.getItem("access_token")}'
+            class="space-y-4">
+            
+            <!-- Loading -->
+            <div class="text-center py-12">
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <p class="mt-4 text-gray-600">Cargando charlas...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmación para eliminar -->
+<div id="delete-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" x-data="{ show: false }">
+    <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+        <h3 class="text-xl font-bold text-gray-900 mb-4">¿Eliminar charla?</h3>
+        <p class="text-gray-600 mb-6">Esta acción no se puede deshacer.</p>
+        
+        <div class="flex space-x-4">
+            <button 
+                onclick="closeDeleteModal()"
+                class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2 rounded-lg">
+                Cancelar
+            </button>
+            <button 
+                id="confirm-delete"
+                class="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg">
+                Eliminar
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let deleteCharlaId = null;
+    
+    function showDeleteModal(id) {
+        deleteCharlaId = id;
+        document.getElementById('delete-modal').classList.remove('hidden');
+    }
+    
+    function closeDeleteModal() {
+        deleteCharlaId = null;
+        document.getElementById('delete-modal').classList.add('hidden');
+    }
+    
+    document.getElementById('confirm-delete').addEventListener('click', async function() {
+        if (!deleteCharlaId) return;
+        
+        const token = localStorage.getItem('access_token');
+        
+        try {
+            const response = await fetch(`/api/charlas/${deleteCharlaId}/`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (response.ok) {
+                showAlert('Charla eliminada exitosamente');
+                // Recargar lista
+                htmx.trigger('#charlas-list', 'load');
+                closeDeleteModal();
+            } else {
+                showAlert('Error al eliminar la charla', 'error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showAlert('Error de conexión', 'error');
+        }
+    });
+    
+    // Renderizar lista de charlas
+    document.body.addEventListener('htmx:afterSwap', function(evt) {
+        if (evt.detail.target.id === 'charlas-list') {
+            const response = JSON.parse(evt.detail.xhr.responseText);
+            
+            if (response.results && response.results.length > 0) {
+                const userRole = '{{ user.rol }}';
+                
+                evt.detail.target.innerHTML = response.results.map(charla => `
+                    <div class="border border-gray-200 rounded-lg p-6 hover:shadow-md transition">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <h3 class="text-xl font-bold text-gray-900">${charla.tema}</h3>
+                                <div class="mt-2 space-y-1 text-gray-600">
+                                    <p>📅 <span class="font-medium">Fecha:</span> ${charla.fecha}</p>
+                                    <p>⏰ <span class="font-medium">Hora:</span> ${charla.hora}</p>
+                                    <p>👷 <span class="font-medium">Supervisor:</span> ${charla.supervisor_nombre}</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex space-x-2">
+                                <a href="/charlas/${charla.id}/" 
+                                   class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition">
+                                    👁️ Ver
+                                </a>
+                                
+                                ${userRole === 'ADMIN' || userRole === 'SUPERVISOR' ? `
+                                    <button 
+                                        onclick="showDeleteModal(${charla.id})"
+                                        class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition">
+                                        🗑️
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                
+                // Paginación
+                if (response.next || response.previous) {
+                    evt.detail.target.innerHTML += `
+                        <div class="flex justify-between mt-6">
+                            ${response.previous ? `
+                                <button 
+                                    hx-get="${response.previous}"
+                                    hx-target="#charlas-list"
+                                    hx-headers='{"Authorization": "Bearer " + localStorage.getItem("access_token")}'
+                                    class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg">
+                                    ← Anterior
+                                </button>
+                            ` : '<div></div>'}
+                            
+                            ${response.next ? `
+                                <button 
+                                    hx-get="${response.next}"
+                                    hx-target="#charlas-list"
+                                    hx-headers='{"Authorization": "Bearer " + localStorage.getItem("access_token")}'
+                                    class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg">
+                                    Siguiente →
+                                </button>
+                            ` : '<div></div>'}
+                        </div>
+                    `;
+                }
+            } else {
+                evt.detail.target.innerHTML = `
+                    <div class="text-center py-12">
+                        <p class="text-gray-600 text-lg">No se encontraron charlas</p>
+                    </div>
+                `;
+            }
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+
+{% block title %}Firmar Charla{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="bg-white rounded-xl shadow-md p-8">
+        <!-- Información de la charla -->
+        <div 
+            id="charla-info"
+            hx-get="/api/charlas/{{ charla_id }}/"
+            hx-trigger="load"
+            hx-headers='{"Authorization": "Bearer " + localStorage.getItem("access_token")}'
+            class="mb-6">
+            
+            <div class="text-center py-8">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+        </div>
+        
+        <!-- Canvas para firma digital -->
+        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">Firma Digital</h3>
+            
+            <canvas 
+                id="signature-pad" 
+                class="border-2 border-gray-300 rounded-lg w-full cursor-crosshair"
+                width="800" 
+                height="200">
+            </canvas>
+            
+            <div class="flex justify-between mt-4">
+                <button 
+                    onclick="clearSignature()"
+                    class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition">
+                    🗑️ Limpiar
+                </button>
+                
+                <button 
+                    onclick="saveSignature()"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2 rounded-lg font-bold transition">
+                    ✅ Guardar Firma
+                </button>
+            </div>
+        </div>
+        
+        <!-- Resultado -->
+        <div id="firma-result" class="mt-6"></div>
+    </div>
+</div>
+
+<script>
+    let signaturePad;
+    
+    // Inicializar SignaturePad
+    document.addEventListener('DOMContentLoaded', function() {
+        const canvas = document.getElementById('signature-pad');
+        signaturePad = new SignaturePad(canvas, {
+            backgroundColor: 'rgb(255, 255, 255)',
+            penColor: 'rgb(0, 0, 0)'
+        });
+    });
+    
+    function clearSignature() {
+        signaturePad.clear();
+    }
+    
+    async function saveSignature() {
+        if (signaturePad.isEmpty()) {
+            document.getElementById('firma-result').innerHTML = `
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                    ❌ Por favor, dibuja tu firma antes de guardar
+                </div>
+            `;
+            return;
+        }
+        
+        // Obtener imagen en base64
+        const signatureData = signaturePad.toDataURL();
+        
+        // Enviar a API
+        const token = localStorage.getItem('access_token');
+        const charlaId = {charla_id };
+    
+        try {
+            const response = await fetch('/api/asistencias/firmar/', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    charla_id: charlaId,
+                    firma_data: signatureData
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                document.getElementById('firma-result').innerHTML = `
+                    <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+                        ✅ ¡Firma guardada exitosamente!
+                        <div class="mt-2">
+                            <a href="/dashboard/trabajador/" class="text-green-800 font-bold hover:underline">
+                                Volver al dashboard →
+                            </a>
+                        </div>
+                    </div>
+                `;
+                signaturePad.clear();
+            } else {
+                document.getElementById('firma-result').innerHTML = `
+                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                        ❌ ${result.error || 'Error al guardar la firma'}
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('firma-result').innerHTML = `
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                    ❌ Error de conexión. Intenta nuevamente.
+                </div>
+            `;
+        }
+    }
+    
+    // Mostrar info de la charla
+    document.body.addEventListener('htmx:afterSwap', function(evt) {
+        if (evt.detail.target.id === 'charla-info') {
+            const charla = JSON.parse(evt.detail.xhr.responseText);
+            evt.detail.target.innerHTML = `
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">${charla.tema}</h2>
+                    <div class="grid grid-cols-2 gap-4 text-gray-700">
+                        <div>
+                            <span class="font-medium">📅 Fecha:</span> ${charla.fecha}
+                        </div>
+                        <div>
+                            <span class="font-medium">⏰ Hora:</span> ${charla.hora}
+                        </div>
+                        <div class="col-span-2">
+                            <span class="font-medium">👷 Supervisor:</span> ${charla.supervisor_detalle.first_name} ${charla.supervisor_detalle.last_name}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    });
+</script>
+{% endblock %}

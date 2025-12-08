@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Charlas de Seguridad{% endblock %}</title>
+    
+    <!-- TailwindCSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    <!-- Alpine.js (para modales) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- Signature Pad para firmas digitales -->
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+    
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+    
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navbar -->
+    {% include 'components/navbar.html' %}
+    
+    <div class="flex">
+        <!-- Sidebar (solo para supervisor y admin) -->
+        {% if user.rol in 'ADMIN,SUPERVISOR' %}
+            {% include 'components/sidebar.html' %}
+        {% endif %}
+        
+        <!-- Main Content -->
+        <main class="flex-1 p-6 {% if user.rol in 'ADMIN,SUPERVISOR' %}ml-64{% endif %}">
+            <!-- Mensajes de alerta -->
+            <div id="alerts-container" class="mb-4"></div>
+            
+            <!-- Contenido de la página -->
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    
+    <!-- Script global para manejar JWT en HTMX -->
+    <script>
+        // Obtener token del localStorage
+        const token = localStorage.getItem('access_token');
+        
+        // Configurar HTMX para incluir JWT en todas las peticiones
+        document.body.addEventListener('htmx:configRequest', (event) => {
+            if (token) {
+                event.detail.headers['Authorization'] = `Bearer ${token}`;
+            }
+        });
+        
+        // Manejar errores 401 (token expirado)
+        document.body.addEventListener('htmx:responseError', (event) => {
+            if (event.detail.xhr.status === 401) {
+                localStorage.removeItem('access_token');
+                window.location.href = '/login/';
+            }
+        });
+        
+        // Función para mostrar alertas
+        function showAlert(message, type = 'success') {
+            const alertsContainer = document.getElementById('alerts-container');
+            const alert = document.createElement('div');
+            alert.className = `p-4 rounded-lg ${type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} mb-2`;
+            alert.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <span>${message}</span>
+                    <button onclick="this.parentElement.parentElement.remove()" class="text-xl">&times;</button>
+                </div>
+            `;
+            alertsContainer.appendChild(alert);
+            
+            setTimeout(() => alert.remove(), 5000);
+        }
+        
+        // Manejar respuestas exitosas
+        document.body.addEventListener('htmx:afterSwap', (event) => {
+            if (event.detail.successful && event.detail.xhr.status === 200) {
+                const contentType = event.detail.xhr.getResponseHeader('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    try {
+                        const response = JSON.parse(event.detail.xhr.responseText);
+                        if (response.message) {
+                            showAlert(response.message);
+                        }
+                    } catch (e) {}
+                }
+            }
+        });
+    </script>
+    
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>
