@@ -2,7 +2,7 @@
     <div class="mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
             <div class="flex items-center">
-                <a href="{% if user.rol == 'ADMIN' %}/dashboard/admin/{% elif user.rol == 'SUPERVISOR' %}/dashboard/supervisor/{% else %}/dashboard/trabajador/{% endif %}" class="text-2xl font-bold">
+                <a href="javascript:goToDashboard()" class="text-2xl font-bold">
                     🛡️ Charlas de Seguridad
                 </a>
             </div>
@@ -11,13 +11,8 @@
                 <!-- Usuario info -->
                 <div class="flex items-center space-x-2">
                     <div class="text-right">
-                        <p class="text-sm font-medium">{{ user.get_full_name }}</p>
-                        <p class="text-xs text-blue-300">
-                            {% if user.rol == 'ADMIN' %}🛡️ Administrador
-                            {% elif user.rol == 'SUPERVISOR' %}👷 Supervisor
-                            {% else %}👤 Trabajador
-                            {% endif %}
-                        </p>
+                        <p id="user-name" class="text-sm font-medium">Cargando...</p>
+                        <p id="user-role" class="text-xs text-blue-300"></p>
                     </div>
                 </div>
                 
@@ -33,9 +28,47 @@
 </nav>
 
 <script>
+    // Cargar info del usuario desde localStorage
+    window.addEventListener('DOMContentLoaded', function() {
+        const userInfo = localStorage.getItem('user_info');
+        if (userInfo) {
+            try {
+                const user = JSON.parse(userInfo);
+                document.getElementById('user-name').textContent = `${user.first_name} ${user.last_name}`;
+                
+                const roleEmoji = user.rol === 'ADMIN' ? '🛡️' : user.rol === 'SUPERVISOR' ? '👷' : '👤';
+                const roleText = user.rol === 'ADMIN' ? 'Administrador' : user.rol === 'SUPERVISOR' ? 'Supervisor' : 'Trabajador';
+                document.getElementById('user-role').textContent = `${roleEmoji} ${roleText}`;
+            } catch (e) {
+                console.error('Error parsing user info:', e);
+            }
+        }
+    });
+    
+    function goToDashboard() {
+        const userInfo = localStorage.getItem('user_info');
+        if (userInfo) {
+            try {
+                const user = JSON.parse(userInfo);
+                if (user.rol === 'ADMIN') {
+                    window.location.href = '/dashboard/admin/';
+                } else if (user.rol === 'SUPERVISOR') {
+                    window.location.href = '/dashboard/supervisor/';
+                } else {
+                    window.location.href = '/dashboard/trabajador/';
+                }
+            } catch (e) {
+                window.location.href = '/login/';
+            }
+        } else {
+            window.location.href = '/login/';
+        }
+    }
+    
     function logout() {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        window.location.href = '/login/';
+        // Limpiar todo el localStorage
+        localStorage.clear();
+        // Redirigir a login
+        window.location.replace('/login/');
     }
 </script>

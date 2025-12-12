@@ -29,12 +29,12 @@
     
     <div class="flex">
         <!-- Sidebar (solo para supervisor y admin) -->
-        {% if user.rol in 'ADMIN,SUPERVISOR' %}
+        <div id="sidebar-container">
             {% include 'components/sidebar.html' %}
-        {% endif %}
+        </div>
         
         <!-- Main Content -->
-        <main class="flex-1 p-6 {% if user.rol in 'ADMIN,SUPERVISOR' %}ml-64{% endif %}">
+        <main id="main-content" class="flex-1 p-6">
             <!-- Mensajes de alerta -->
             <div id="alerts-container" class="mb-4"></div>
             
@@ -43,23 +43,86 @@
         </main>
     </div>
     
+    <script>
+        // Mostrar/ocultar sidebar según rol
+        window.addEventListener('DOMContentLoaded', function() {
+            const userInfo = localStorage.getItem('user_info');
+            const sidebarContainer = document.getElementById('sidebar-container');
+            const mainContent = document.getElementById('main-content');
+            
+            if (userInfo) {
+                try {
+                    const user = JSON.parse(userInfo);
+                    
+                    if (user.rol === 'ADMIN' || user.rol === 'SUPERVISOR') {
+                        // Mostrar sidebar
+                        sidebarContainer.style.display = 'block';
+                        mainContent.classList.add('ml-64');
+                    } else {
+                        // Ocultar sidebar para trabajadores
+                        sidebarContainer.style.display = 'none';
+                        mainContent.classList.remove('ml-64');
+                    }
+                } catch (e) {
+                    console.error('Error:', e);
+                }
+            }
+        });
+    </script>
+    
     <!-- Script global para manejar JWT en HTMX -->
     <script>
+        // Verificar autenticación al cargar la página
+        window.addEventListener('DOMContentLoaded', function() {
+            const token = localStorage.getItem('access_token');
+            const currentPath = window.location.pathname;
+            
+            // Si no hay token y no estamos en login, redirigir
+            if (!token && !currentPath.includes('/login')) {
+                window.location.replace('/login/');
+                return;
+            }
+            
+            // Si hay token, verificar que sea válido
+            if (token && !currentPath.includes('/login')) {
+                verifyToken(token);
+            }
+        });
+        
+        async function verifyToken(token) {
+            try {
+                const response = await fetch('/api/usuarios/me/', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    // Token inválido, limpiar y redirigir
+                    localStorage.clear();
+                    window.location.replace('/login/');
+                }
+            } catch (error) {
+                console.error('Error verificando token:', error);
+            }
+        }
+        
         // Obtener token del localStorage
         const token = localStorage.getItem('access_token');
         
         // Configurar HTMX para incluir JWT en todas las peticiones
         document.body.addEventListener('htmx:configRequest', (event) => {
-            if (token) {
-                event.detail.headers['Authorization'] = `Bearer ${token}`;
+            const currentToken = localStorage.getItem('access_token');
+            if (currentToken) {
+                event.detail.headers['Authorization'] = `Bearer ${currentToken}`;
             }
         });
         
         // Manejar errores 401 (token expirado)
         document.body.addEventListener('htmx:responseError', (event) => {
             if (event.detail.xhr.status === 401) {
-                localStorage.removeItem('access_token');
-                window.location.href = '/login/';
+                localStorage.clear();
+                window.location.replace('/login/');
             }
         });
         

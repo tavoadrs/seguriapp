@@ -11,6 +11,13 @@ class Charla(models.Model):
         related_name='charlas_supervisadas',
         limit_choices_to={'rol__in': ['ADMIN', 'SUPERVISOR']}
     )
+    #campo para archivos adjuntos
+    archivo_adjunto = models.FileField(
+    upload_to='media/charlas',
+    null=True,
+    blank=True,
+    help_text='Archivo adjunto (PDF, DOCX, PPT)'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -21,3 +28,6 @@ class Charla(models.Model):
     
     def __str__(self):
         return f"{self.tema} - {self.fecha} {self.hora}"
+    @property
+    def tiene_archivo(self):
+        return bool(self.archivo_adjunto)

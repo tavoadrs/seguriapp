@@ -137,7 +137,10 @@
                     <div class="border border-gray-200 rounded-lg p-6 hover:shadow-md transition">
                         <div class="flex justify-between items-start">
                             <div class="flex-1">
-                                <h3 class="text-xl font-bold text-gray-900">${charla.tema}</h3>
+                                <div class="flex items-center space-x-2 mb-2">
+                                    <h3 class="text-xl font-bold text-gray-900">${charla.tema}</h3>
+                                    ${charla.tiene_archivo ? '<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">📎 Con adjunto</span>' : ''}
+                                </div>
                                 <div class="mt-2 space-y-1 text-gray-600">
                                     <p>📅 <span class="font-medium">Fecha:</span> ${charla.fecha}</p>
                                     <p>⏰ <span class="font-medium">Hora:</span> ${charla.hora}</p>
@@ -148,7 +151,11 @@
                             <div class="flex space-x-2">
                                 <a href="/charlas/${charla.id}/" 
                                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition">
-                                    👁️ Ver
+                                     Ver
+                                </a>
+                                <a href="/cuestionarios/crear" 
+                                   class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition">
+                                    Crear Cuestionario
                                 </a>
                                 
                                 ${userRole === 'ADMIN' || userRole === 'SUPERVISOR' ? `
@@ -159,6 +166,7 @@
                                     </button>
                                 ` : ''}
                             </div>
+
                         </div>
                     </div>
                 `).join('');

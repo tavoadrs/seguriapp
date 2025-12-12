@@ -17,7 +17,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 
@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'apps.asistencias',
     'apps.reportes',
     'apps.accesos',
+    'apps.cuestionarios',
 
 ]
 
@@ -131,6 +132,7 @@ AUTH_USER_MODEL = 'users.Usuario'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication'
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',

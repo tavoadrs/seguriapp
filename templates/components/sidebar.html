@@ -1,67 +1,116 @@
-<aside class="fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-white shadow-lg overflow-y-auto">
-    <nav class="p-4 space-y-2">
-        {% if user.rol == 'ADMIN' %}
-            <!-- Admin Menu -->
-            <a href="/dashboard/admin/" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-blue-50 transition">
-                <span class="text-2xl">📊</span>
-                <span class="font-medium">Dashboard</span>
-            </a>
-            
-            <a href="/usuarios/" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-blue-50 transition">
-                <span class="text-2xl">👥</span>
-                <span class="font-medium">Usuarios</span>
-            </a>
-            
-            <a href="/charlas/" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-blue-50 transition">
-                <span class="text-2xl">📚</span>
-                <span class="font-medium">Charlas</span>
-            </a>
-            
-            <a href="/reportes/" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-blue-50 transition">
-                <span class="text-2xl">📄</span>
-                <span class="font-medium">Reportes</span>
-            </a>
-            
-            <a href="/accesos/" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-blue-50 transition">
-                <span class="text-2xl">🚪</span>
-                <span class="font-medium">Control de Acceso</span>
-            </a>
-            
-        {% elif user.rol == 'SUPERVISOR' %}
-            <!-- Supervisor Menu -->
-            <a href="/dashboard/supervisor/" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-blue-50 transition">
-                <span class="text-2xl">📊</span>
-                <span class="font-medium">Dashboard</span>
-            </a>
-            
-            <a href="/charlas/" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-blue-50 transition">
-                <span class="text-2xl">📚</span>
-                <span class="font-medium">Mis Charlas</span>
-            </a>
-            
-            <a href="/charlas/crear/" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-blue-50 transition">
-                <span class="text-2xl">➕</span>
-                <span class="font-medium">Nueva Charla</span>
-            </a>
-            
-            <a href="/reportes/" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-blue-50 transition">
-                <span class="text-2xl">📄</span>
-                <span class="font-medium">Reportes</span>
-            </a>
-            
-            <a href="/accesos/" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-blue-50 transition">
-                <span class="text-2xl">🚪</span>
-                <span class="font-medium">Control de Acceso</span>
-            </a>
-        {% endif %}
-        
-        <!-- Divider -->
-        <hr class="my-4">
-        
-        <!-- Profile -->
-        <a href="/perfil/" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-blue-50 transition">
-            <span class="text-2xl">⚙️</span>
-            <span class="font-medium">Mi Perfil</span>
-        </a>
+<aside id="sidebar" class="fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-white shadow-lg overflow-y-auto z-40">
+    <nav class="p-4 space-y-2" id="sidebar-menu">
+        <!-- Skeleton loading mientras carga -->
+        <div class="animate-pulse space-y-2">
+            <div class="h-12 bg-gray-200 rounded-lg"></div>
+            <div class="h-12 bg-gray-200 rounded-lg"></div>
+            <div class="h-12 bg-gray-200 rounded-lg"></div>
+        </div>
     </nav>
 </aside>
+
+<script>
+    // Cargar menú según rol del usuario
+    (function() {
+        const userInfo = localStorage.getItem('user_info');
+        if (!userInfo) {
+            console.warn('No user info found');
+            return;
+        }
+        
+        try {
+            const user = JSON.parse(userInfo);
+            const menuContainer = document.getElementById('sidebar-menu');
+            
+            if (!menuContainer) {
+                console.error('Sidebar menu container not found');
+                return;
+            }
+            
+            let menuHTML = '';
+            
+            if (user.rol === 'ADMIN') {
+                menuHTML = `
+                    <a href="/dashboard/admin/" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-blue-50 transition">
+                        <span class="text-2xl">📊</span>
+                        <span class="font-medium">Dashboard</span>
+                    </a>
+                    
+                    <a href="/usuarios/" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-blue-50 transition">
+                        <span class="text-2xl">👥</span>
+                        <span class="font-medium">Usuarios</span>
+                    </a>
+                    
+                    <a href="/charlas/" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-blue-50 transition">
+                        <span class="text-2xl">📚</span>
+                        <span class="font-medium">Charlas</span>
+                    </a>
+                    
+                    <a href="/reportes/" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-blue-50 transition">
+                        <span class="text-2xl">📄</span>
+                        <span class="font-medium">Reportes</span>
+                    </a>
+                    
+                    <a href="/accesos/" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-blue-50 transition">
+                        <span class="text-2xl">🚪</span>
+                        <span class="font-medium">Control de Acceso</span>
+                    </a>
+                    
+                    <hr class="my-4 border-gray-200">
+                    
+                    <a href="#" onclick="logout(); return false;" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-red-50 text-red-600 transition">
+                        <span class="text-2xl">🚪</span>
+                        <span class="font-medium">Cerrar Sesión</span>
+                    </a>
+                `;
+            } else if (user.rol === 'SUPERVISOR') {
+                menuHTML = `
+                    <a href="/dashboard/supervisor/" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-blue-50 transition">
+                        <span class="text-2xl">📊</span>
+                        <span class="font-medium">Dashboard</span>
+                    </a>
+                    
+                    <a href="/charlas/" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-blue-50 transition">
+                        <span class="text-2xl">📚</span>
+                        <span class="font-medium">Mis Charlas</span>
+                    </a>
+                    
+                    <a href="/charlas/crear/" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-blue-50 transition">
+                        <span class="text-2xl">➕</span>
+                        <span class="font-medium">Nueva Charla</span>
+                    </a>
+                    
+                    <a href="/reportes/" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-blue-50 transition">
+                        <span class="text-2xl">📄</span>
+                        <span class="font-medium">Reportes</span>
+                    </a>
+                    
+                    <a href="/accesos/" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-blue-50 transition">
+                        <span class="text-2xl">🚪</span>
+                        <span class="font-medium">Control de Acceso</span>
+                    </a>
+                    
+                    <hr class="my-4 border-gray-200">
+                    
+                    <a href="#" onclick="logout(); return false;" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-red-50 text-red-600 transition">
+                        <span class="text-2xl">🚪</span>
+                        <span class="font-medium">Cerrar Sesión</span>
+                    </a>
+                `;
+            } else {
+                // Trabajador - ocultar sidebar
+                const sidebar = document.getElementById('sidebar');
+                if (sidebar) {
+                    sidebar.style.display = 'none';
+                }
+                return;
+            }
+            
+            menuContainer.innerHTML = menuHTML;
+            console.log('Sidebar loaded successfully for role:', user.rol);
+            
+        } catch (e) {
+            console.error('Error loading sidebar:', e);
+        }
+    })();
+</script>

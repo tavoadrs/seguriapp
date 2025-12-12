@@ -10,17 +10,21 @@ from apps.charlas.views import CharlaViewSet
 from apps.asistencias.views import AsistenciaViewSet
 from apps.reportes.views import ReporteViewSet
 from apps.accesos.views import ControlAccesoViewSet
+from apps.cuestionarios.views import CuestionarioViewSet
 
 # Importar vistas del frontend
 from core import views
 
 # Router API
+
+
 router = DefaultRouter()
 router.register(r'usuarios', UsuarioViewSet, basename='usuario')
 router.register(r'charlas', CharlaViewSet, basename='charla')
 router.register(r'asistencias', AsistenciaViewSet, basename='asistencia')
 router.register(r'reportes', ReporteViewSet, basename='reporte')
 router.register(r'accesos', ControlAccesoViewSet, basename='acceso')
+router.register(r'cuestionarios', CuestionarioViewSet, basename='cuestionario')
 
 urlpatterns = [
     # Admin
@@ -52,6 +56,9 @@ urlpatterns = [
     path('charlas/<int:charla_id>/', views.detalle_charla, name='detalle_charla'),
     path('charlas/<int:charla_id>/firmar/', views.firmar_charla, name='firmar_charla'),
     
+    # Cuestionarios
+    path('cuestionarios/crear',views.crear_cuestionario, name= 'crear_cuestionario'),
+
     # Usuarios
     path('usuarios/', views.gestionar_usuarios, name='gestionar_usuarios'),
     

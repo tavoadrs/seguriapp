@@ -1,0 +1,219 @@
+{% extends 'base.html' %}
+
+{% block title %}Reportes{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div>
+        <h1 class="text-3xl font-bold text-gray-900">📄 Reportes PDF</h1>
+        <p class="text-gray-600">Gestión de reportes de charlas</p>
+    </div>
+    
+    <!-- Filtros -->
+    <div class="bg-white rounded-xl shadow-md p-4">
+        <div class="flex space-x-4">
+            <input 
+                type="text" 
+                id="search-charla"
+                placeholder="Buscar por charla..."
+                class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+            
+            <select 
+                name="mes"
+                class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                <option value="">Todos los meses</option>
+                <option value="1">Enero</option>
+                <option value="2">Febrero</option>
+                <option value="3">Marzo</option>
+                <option value="4">Abril</option>
+                <option value="5">Mayo</option>
+                <option value="6">Junio</option>
+                <option value="7">Julio</option>
+                <option value="8">Agosto</option>
+                <option value="9">Septiembre</option>
+                <option value="10">Octubre</option>
+                <option value="11">Noviembre</option>
+                <option value="12">Diciembre</option>
+            </select>
+            
+            <button 
+                hx-get="/api/reportes/"
+                hx-trigger="click"
+                hx-target="#reportes-list"
+                hx-include="[name='mes']"
+                hx-headers='{"Authorization": "Bearer " + localStorage.getItem("access_token")}'
+                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition">
+                🔍 Buscar
+            </button>
+        </div>
+    </div>
+    
+    <!-- Lista de Reportes -->
+    <div class="bg-white rounded-xl shadow-md p-6">
+        <div 
+            id="reportes-list"
+            hx-get="/api/reportes/"
+            hx-trigger="load"
+            hx-headers='{"Authorization": "Bearer " + localStorage.getItem("access_token")}'
+            class="space-y-4">
+            
+            <!-- Loading -->
+            <div class="text-center py-12">
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <p class="mt-4 text-gray-600">Cargando reportes...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Vista Previa PDF -->
+<div id="pdf-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl p-6 max-w-6xl w-full mx-4 max-h-[90vh] flex flex-col">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-2xl font-bold text-gray-900">Vista Previa PDF</h3>
+            <button 
+                onclick="closePdfModal()"
+                class="text-gray-500 hover:text-gray-700 text-3xl">&times;</button>
+        </div>
+        
+        <div class="flex-1 overflow-auto">
+            <iframe 
+                id="pdf-iframe" 
+                class="w-full h-full min-h-[600px]"
+                frameborder="0">
+            </iframe>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showPdfModal(url) {
+        document.getElementById('pdf-iframe').src = url;
+        document.getElementById('pdf-modal').classList.remove('hidden');
+    }
+    
+    function closePdfModal() {
+        document.getElementById('pdf-iframe').src = '';
+        document.getElementById('pdf-modal').classList.add('hidden');
+    }
+    
+    async function deleteReporte(id) {
+        if (!confirm('¿Estás seguro de eliminar este reporte?')) return;
+        
+        const token = localStorage.getItem('access_token');
+        
+        try {
+            const response = await fetch(`/api/reportes/${id}/`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (response.ok) {
+                showAlert('Reporte eliminado exitosamente');
+                htmx.trigger('#reportes-list', 'load');
+            } else {
+                showAlert('Error al eliminar el reporte', 'error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showAlert('Error de conexión', 'error');
+        }
+    }
+    
+    // Renderizar lista de reportes
+    document.body.addEventListener('htmx:afterSwap', function(evt) {
+        if (evt.detail.target.id === 'reportes-list') {
+            const response = JSON.parse(evt.detail.xhr.responseText);
+            const userRole = '{{ user.rol }}';
+            
+            if (response.results && response.results.length > 0) {
+                evt.detail.target.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        ${response.results.map(reporte => `
+                            <div class="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition">
+                                <div class="flex items-start justify-between mb-4">
+                                    <div class="text-5xl">📄</div>
+                                    <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold">
+                                        PDF
+                                    </span>
+                                </div>
+                                
+                                <h3 class="font-bold text-lg text-gray-900 mb-2">${reporte.charla_detalle.tema}</h3>
+                                
+                                <div class="space-y-1 text-sm text-gray-600 mb-4">
+                                    <p>📅 <span class="font-medium">Fecha:</span> ${reporte.charla_detalle.fecha}</p>
+                                    <p>👷 <span class="font-medium">Supervisor:</span> ${reporte.charla_detalle.supervisor_nombre}</p>
+                                    <p>📊 <span class="font-medium">Generado:</span> ${new Date(reporte.fecha_generado).toLocaleDateString()}</p>
+                                </div>
+                                
+                                <div class="flex space-x-2">
+                                    ${reporte.pdf_url ? `
+                                        <button 
+                                            onclick="showPdfModal('${reporte.pdf_url}')"
+                                            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition">
+                                            👁️ Ver
+                                        </button>
+                                        
+                                        <a 
+                                            href="${reporte.pdf_url}" 
+                                            download
+                                            class="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-bold text-center transition">
+                                            📥 Descargar
+                                        </a>
+                                    ` : '<p class="text-gray-500 text-sm">PDF no disponible</p>'}
+                                    
+                                    ${userRole === 'ADMIN' ? `
+                                        <button 
+                                            onclick="deleteReporte(${reporte.id})"
+                                            class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg transition">
+                                            🗑️
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                
+                // Paginación
+                if (response.next || response.previous) {
+                    evt.detail.target.innerHTML += `
+                        <div class="flex justify-between mt-8">
+                            ${response.previous ? `
+                                <button 
+                                    hx-get="${response.previous}"
+                                    hx-target="#reportes-list"
+                                    hx-headers='{"Authorization": "Bearer " + localStorage.getItem("access_token")}'
+                                    class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg font-bold">
+                                    ← Anterior
+                                </button>
+                            ` : '<div></div>'}
+                            
+                            ${response.next ? `
+                                <button 
+                                    hx-get="${response.next}"
+                                    hx-target="#reportes-list"
+                                    hx-headers='{"Authorization": "Bearer " + localStorage.getItem("access_token")}'
+                                    class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg font-bold">
+                                    Siguiente →
+                                </button>
+                            ` : '<div></div>'}
+                        </div>
+                    `;
+                }
+            } else {
+                evt.detail.target.innerHTML = `
+                    <div class="text-center py-12">
+                        <div class="text-6xl mb-4">📄</div>
+                        <p class="text-gray-600 text-lg mb-4">No hay reportes generados</p>
+                        <p class="text-gray-500 text-sm">Los reportes se generan automáticamente desde el detalle de cada charla</p>
+                    </div>
+                `;
+            }
+        }
+    });
+</script>
+{% endblock %}
