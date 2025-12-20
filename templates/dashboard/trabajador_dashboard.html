@@ -88,24 +88,54 @@
             }
         }
         
-        if (evt.detail.target.id === 'mis-charlas') {
+if (evt.detail.target.id === 'mis-charlas') {
             const response = JSON.parse(evt.detail.xhr.responseText);
             if (response.results && response.results.length > 0) {
-                evt.detail.target.innerHTML = response.results.map(charla => `
-                    <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <h3 class="font-bold text-lg text-gray-900">${charla.tema}</h3>
-                                <p class="text-gray-600 text-sm mt-1">📅 ${charla.fecha} - ⏰ ${charla.hora}</p>
-                                <p class="text-gray-600 text-sm">👷 Supervisor: ${charla.supervisor_nombre}</p>
+                evt.detail.target.innerHTML = response.results.map(charla => {
+                    
+                    // Asegúrate de que tu CharlaSerializer envíe:
+                    // 1. charla.archivo_url (URL directa al archivo, si existe)
+                    // 2. charla.tiene_cuestionario (booleano: true/false)
+
+                    const archivoHtml = charla.archivo_url ? `
+                        <a href="${charla.archivo_url}" download
+                           class="text-sm text-blue-600 hover:text-blue-800 font-medium transition flex items-center mt-2">
+                           <span class="text-base mr-1">📎</span> Descargar Material
+                        </a>
+                    ` : '';
+
+                    const cuestionarioHtml = charla.tiene_cuestionario ? `
+                        <a href="/charlas/${charla.id}/firmar/"
+                           class="text-sm text-yellow-600 hover:text-yellow-800 font-bold transition flex items-center mt-2">
+                            <span class="text-base mr-1">📝</span> Responder Cuestionario
+                        </a>
+                    ` : `
+                        <p class="text-sm text-green-600 font-medium flex items-center mt-2">
+                            <span class="text-base mr-1">✅</span> No Requiere Evaluación
+                        </p>
+                    `;
+                    return `
+                        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-bold text-lg text-gray-900">${charla.tema}</h3>
+                                    <p class="text-gray-600 text-sm mt-1">📅 ${charla.fecha} - ⏰ ${charla.hora}</p>
+                                    <p class="text-gray-600 text-sm">👷 Supervisor: ${charla.supervisor_nombre}</p>
+                                    
+                                    <div class="flex flex-col sm:flex-row sm:space-x-4 mt-2">
+                                        ${archivoHtml}
+                                        ${cuestionarioHtml}
+                                    </div>
+                                    
+                                </div>
+                                <a href="/charlas/${charla.id}/firmar/" 
+                                   class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold transition">
+                                    Entrar y Firmar
+                                </a>
                             </div>
-                            <a href="/charlas/${charla.id}/firmar/" 
-                               class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition">
-                                ✍️ Firmar
-                            </a>
                         </div>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
             } else {
                 evt.detail.target.innerHTML = '<p class="text-center text-gray-600 py-8">No hay charlas disponibles</p>';
             }

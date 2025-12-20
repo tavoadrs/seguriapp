@@ -101,8 +101,10 @@
     document.getElementById('confirm-delete').addEventListener('click', async function() {
         if (!deleteCharlaId) return;
         
+        const idToDelete = deleteCharlaId; //guardamos ID antes de cerrar el modal
         const token = localStorage.getItem('access_token');
-        
+
+        //lógica de fetch DELETE
         try {
             const response = await fetch(`/api/charlas/${deleteCharlaId}/`, {
                 method: 'DELETE',
@@ -111,17 +113,24 @@
                 }
             });
             
-            if (response.ok) {
+            if (response.ok) { // Esto ocurre si el estatus es 204 No Content
+                //Eliminacion del DOM
+                const charlaElement = document.getElementById(`charla-item-${idToDelete}`);
+                if (charlaElement) {
+                charlaElement.remove();
+                }
                 showAlert('Charla eliminada exitosamente');
                 // Recargar lista
                 htmx.trigger('#charlas-list', 'load');
                 closeDeleteModal();
             } else {
                 showAlert('Error al eliminar la charla', 'error');
+                closeDeleteModal();
             }
         } catch (error) {
             console.error('Error:', error);
             showAlert('Error de conexión', 'error');
+            closeDeleteModal();
         }
     });
     
@@ -134,7 +143,8 @@
                 const userRole = '{{ user.rol }}';
                 
                 evt.detail.target.innerHTML = response.results.map(charla => `
-                    <div class="border border-gray-200 rounded-lg p-6 hover:shadow-md transition">
+                    <div class="border border-gray-200 rounded-lg p-6 hover:shadow-md transition"
+                        id="charla-item-${charla.id}">
                         <div class="flex justify-between items-start">
                             <div class="flex-1">
                                 <div class="flex items-center space-x-2 mb-2">
@@ -153,10 +163,7 @@
                                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition">
                                      Ver
                                 </a>
-                                <a href="/cuestionarios/crear" 
-                                   class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition">
-                                    Crear Cuestionario
-                                </a>
+
                                 
                                 ${userRole === 'ADMIN' || userRole === 'SUPERVISOR' ? `
                                     <button 

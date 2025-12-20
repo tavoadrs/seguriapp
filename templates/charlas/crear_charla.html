@@ -64,7 +64,7 @@
                 <p class="text-gray-500 text-xs mt-1">Formatos permitidos: PDF, DOCX, PPT (máximo 10MB)</p>
             </div>
 
-            <!-- Cuestionario 
+            <!-- Crear cuestionario 
              <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <a href="/cuestionarios/crear" class=" bg-blue-600 hover:bg-blue-700 text-white rounded-xl p-6 transition group">
                     <div>
@@ -76,20 +76,30 @@
               -->
             
             <!-- Resultado -->
-            <div id="form-result"></div>
+    <div id="form-result" class="mb-6"></div>
             
-            <!-- Botones -->
-            <div class="flex space-x-4">
+            <div class="flex flex-col space-y-4 md:flex-row md:space-y-0 md:space-x-4">
+                
                 <button 
                     type="submit"
-                    class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">
-                    ✅ Crear Charla
+                    onclick="setNextAction('lista')"
+                    class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition shadow-md">
+                    ✅ Crear y Finalizar
                 </button>
                 
+                <button 
+                    type="submit"
+                    onclick="setNextAction('cuestionario')"
+                    class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition shadow-md flex justify-center items-center">
+                    <span>📝 Guardar y Crear Cuestionario</span>
+                </button>
+            </div>
+
+            <div class="mt-6 text-center">
                 <a 
                     href="/charlas/"
-                    class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 rounded-lg text-center transition">
-                    ❌ Cancelar
+                    class="text-gray-500 hover:text-red-600 font-medium transition duration-200">
+                    Cancelar operación
                 </a>
             </div>
         </form>
@@ -97,7 +107,15 @@
 </div>
 
 <script>
-    // Mostrar nombre del archivo seleccionado
+    // 1. VARIABLE DE ESTADO: Controla a dónde ir después de guardar
+    let nextAction = 'lista'; 
+
+    // 2. FUNCIÓN DE CONTROL: Los botones del HTML llamarán a esto
+    function setNextAction(action) {
+        nextAction = action;
+    }
+
+    // Mostrar nombre del archivo seleccionado (Igual que antes)
     document.getElementById('archivo_adjunto').addEventListener('change', function(e) {
         const fileName = e.target.files[0]?.name || 'No hay archivo seleccionado';
         document.getElementById('archivo-nombre').textContent = fileName;
@@ -120,7 +138,7 @@
         
         const user = JSON.parse(userInfo);
         
-        // Crear FormData para enviar archivo
+        // Crear FormData
         const formData = new FormData();
         formData.append('tema', document.querySelector('[name="tema"]').value);
         formData.append('fecha', document.querySelector('[name="fecha"]').value);
@@ -140,7 +158,6 @@
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`
-                    // NO incluir Content-Type, se establece automáticamente para FormData
                 },
                 body: formData
             });
@@ -148,27 +165,33 @@
             const result = await response.json();
             
             if (response.ok) {
+                // Mensaje de éxito visual
+                const mensajeExtra = nextAction === 'cuestionario' 
+                    ? 'Redirigiendo al creador de cuestionarios...' 
+                    : 'Guardado exitosamente.';
+
                 document.getElementById('form-result').innerHTML = `
                     <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-                        ✅ ¡Charla creada exitosamente!
-                        ${archivoInput.files.length > 0 ? '<p class="text-sm mt-1">📎 Archivo adjunto subido correctamente</p>' : ''}
-                        <div class="mt-2">
-                            <a href="/charlas/${result.id}/" class="text-green-800 font-bold hover:underline">
-                                Ver charla →
-                            </a>
-                        </div>
+                        ✅ ¡Charla creada! ${mensajeExtra}
                     </div>
                 `;
                 
-                // Limpiar formulario
+                // Limpiar formulario visualmente
                 e.target.reset();
-                document.getElementById('archivo-nombre').textContent = 'No hay archivo seleccionado';
                 
-                // Redirigir después de 2 segundos
+                // 3. LÓGICA DE REDIRECCIÓN INTELIGENTE
                 setTimeout(() => {
-                    window.location.href = '/charlas/';
-                }, 2000);
+                    if (nextAction === 'cuestionario') {
+                        // AQUÍ ESTÁ LA MAGIA: Pasamos el ID recién creado (result.id) a la siguiente página
+                        window.location.href = `/cuestionarios/crear?charla_id=${result.id}`;
+                    } else {
+                        // Flujo normal: volver a la lista
+                        window.location.href = '/charlas/';
+                    }
+                }, 1500); // Esperamos 1.5 segundos para que el usuario lea el mensaje
+
             } else {
+                // Manejo de errores (Igual que antes)
                 let errorMessage = 'Error al crear la charla';
                 
                 if (result.tema) errorMessage = `Tema: ${result.tema[0]}`;

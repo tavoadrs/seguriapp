@@ -1,12 +1,11 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import Charla
-from .serializers import CharlaSerializer, CharlaListSerializer
+from apps.charlas.models import Charla
+from apps.charlas.serializers import CharlaSerializer, CharlaListSerializer
 from users.permissions import IsAdmin, IsSupervisor
-from django.http import HttpResponse
-import qrcode
-from io import BytesIO
+from apps.asistencias.serializers import AsistenciaSerializer
+from django.shortcuts import render, get_object_or_404
 
 class CharlaViewSet(viewsets.ModelViewSet):
     queryset = Charla.objects.select_related('supervisor').all()
@@ -24,6 +23,12 @@ class CharlaViewSet(viewsets.ModelViewSet):
             return [IsAdmin()]
         return super().get_permissions()
     
+    def firmar_charla(request,charla_id):
+        #vista HTML para que el trabajador vea el material, responda cuestionario
+        charla = get_object_or_404(Charla, id=charla_id)
+        return render(request, 'charlas/firmar_charla.html',{'charla':charla})
+
+    
     def get_queryset(self):
         user = self.request.user
         if user.is_trabajador:
@@ -34,22 +39,22 @@ class CharlaViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def asistentes(self, request, pk=None):
         charla = self.get_object()
-        from asistencias.serializers import AsistenciaSerializer
         asistencias = charla.asistencias.select_related('usuario').all()
         serializer = AsistenciaSerializer(asistencias, many=True)
         return Response(serializer.data)
     
-    def qr_code(self, request, pk=None):
+    @action(detail=True, methods=['post'])
+    def confirmar_asistencia(self, request, pk=None):
         charla = self.get_object()
-        qr_data = f"charla_seguridad://charla/{charla.id}"
+        usuario = request.user
         
-        qr = qrcode.QRCode(version=1, box_size=10, border=5)
-        qr.add_data(qr_data)
-        qr.make(fit=True)
-        
-        img = qr.make_image(fill_color="black", back_color="white")
-        buffer = BytesIO()
-        img.save(buffer, format='PNG')
-        buffer.seek(0)
-        
-        return HttpResponse(buffer, content_type='image/png')
+        # Opción A: Si tienes un campo ManyToMany 'asistentes' en Charla
+        if usuario not in charla.asistentes.all():
+            charla.asistentes.add(usuario)
+            return Response({'status': 'Asistencia confirmada'}, status=status.HTTP_200_OK)
+        else:
+            return Response({'status': 'Ya estabas registrado'}, status=status.HTTP_200_OK)
+            
+        # Opción B: Si tienes un modelo intermedio 'AsistenciaCharla'
+        # AsistenciaCharla.objects.get_or_create(charla=charla, usuario=usuario)
+        # return Response({'status': 'Confirmado'})

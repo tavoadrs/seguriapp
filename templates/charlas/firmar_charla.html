@@ -1,152 +1,298 @@
 {% extends 'base.html' %}
 
-{% block title %}Firmar Charla{% endblock %}
+{% block title %}Firmar Charla {% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto">
+<div class="max-w-3xl mx-auto space-y-8">
+    
     <div class="bg-white rounded-xl shadow-md p-8">
-        <!-- Información de la charla -->
-        <div 
-            id="charla-info"
-            hx-get="/api/charlas/{{ charla_id }}/"
-            hx-trigger="load"
-            hx-headers='{"Authorization": "Bearer " + localStorage.getItem("access_token")}'
-            class="mb-6">
-            
-            <div class="text-center py-8">
-                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            </div>
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">{{ charla.tema }}</h1>
+        <div class="text-gray-600 mb-6 flex flex-wrap gap-4 text-sm">
+            <span>📅 {{ charla.fecha }}</span>
+            <span>⏰ {{ charla.hora }}</span>
+            <span>👤 : {{ charla.supervisor.get_full_name|default:charla.supervisor.username }}</span>
         </div>
         
-        <!-- Canvas para firma digital -->
-        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6">
-            <h3 class="text-lg font-bold text-gray-900 mb-4">Firma Digital</h3>
+        {% if charla.archivo_adjunto %}
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mt-4">
+            <h3 class="font-bold text-blue-900 text-lg mb-2">📚 Material de Estudio</h3>
+            <p class="text-blue-700 mb-4 text-sm">Descarga y revisa el documento adjunto antes de continuar.</p>
             
-            <canvas 
-                id="signature-pad" 
-                class="border-2 border-gray-300 rounded-lg w-full cursor-crosshair"
-                width="800" 
-                height="200">
-            </canvas>
+            <a href="{{ charla.archivo_adjunto.url }}" download 
+               class="flex items-center justify-center w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-bold transition shadow-sm group">
+                <span class="text-xl mr-2 group-hover:animate-bounce">📥</span> 
+                Descargar Documento
+            </a>
+        </div>
+        {% else %}
+        <div class="bg-gray-100 p-4 rounded-lg text-center text-gray-500 italic mt-4">
+            No se requiere material adjunto para esta charla.
+        </div>
+        {% endif %}
+    </div>
+
+    <div id="seccion-cuestionario" class="bg-white rounded-xl shadow-md p-8 relative">
+        <div class="border-b pb-4 mb-4">
+            <h2 class="text-2xl font-bold text-gray-900">📝 Cuestionario de Seguridad</h2>
+            <p class="text-gray-500 text-sm">Responde correctamente para habilitar tu firma.</p>
+        </div>
+
+        <div id="loading-quiz" class="text-center py-12">
+            <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-blue-600 border-t-transparent"></div>
+            <p class="mt-3 text-gray-500 font-medium">Cargando preguntas...</p>
+        </div>
+
+        <div id="quiz-container" class="hidden">
+            <div class="mb-4 bg-yellow-50 text-yellow-800 p-3 rounded-lg text-sm border border-yellow-200">
+                ℹ️ Aprobación mínima requerida: <span id="quiz-aprobacion" class="font-bold"></span>%
+            </div>
             
-            <div class="flex justify-between mt-4">
-                <button 
-                    onclick="clearSignature()"
-                    class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition">
-                    🗑️ Limpiar
-                </button>
+            <form id="form-quiz" class="space-y-8">
+                <div id="preguntas-render" class="space-y-8"></div>
                 
-                <button 
-                    onclick="saveSignature()"
-                    class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2 rounded-lg font-bold transition">
-                    ✅ Guardar Firma
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition shadow-md">
+                    Enviar Respuestas
                 </button>
-            </div>
+            </form>
         </div>
-        
-        <!-- Resultado -->
-        <div id="firma-result" class="mt-6"></div>
+
+        <div id="quiz-result" class="hidden mt-6 p-6 rounded-lg text-center border-2"></div>
+    </div>
+
+    <div id="bloque-firma" class="bg-white rounded-xl shadow-md p-8 opacity-40 pointer-events-none grayscale transition-all duration-500">
+        <div class="text-center">
+            <div class="text-5xl mb-4">🔒</div>
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">Firmar Asistencia</h2>
+            <p class="text-gray-600 mb-6">Esta sección se desbloqueará automáticamente al aprobar el cuestionario.</p>
+            
+            <div class="mb-4 pt-4 border-t border-gray-200">
+                <label for="rut_pass_code" class="block text-sm font-medium text-gray-700 mb-2">
+                    🔑 Ingresa los últimos 4 dígitos de tu RUT (sin dígito verificador)
+                </label>
+                <input
+                    type="password"
+                    id="rut_pass_code"
+                    name="rut_pass_code"
+                    maxlength="4"
+                    minlength="4"
+                    pattern="\d{4}"
+                    required
+                    placeholder="Ej: Si RUT es 12.345.678-9, ingresa 5678"
+                    class="mt-1 block w-full px-3 py-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm text-center tracking-widest"
+                >
+            </div>
+
+            <button id="btn-firmar" class="w-full bg-gray-400 text-white font-bold py-4 rounded-xl text-lg flex items-center justify-center space-x-2 cursor-not-allowed mt-4" disabled>
+                <span>Completar Cuestionario Primero</span>
+            </button>
+        </div>
+         <div id="firma-result" class="mt-6"></div>
     </div>
 </div>
 
 <script>
-    let signaturePad;
-    
-    // Inicializar SignaturePad
-    document.addEventListener('DOMContentLoaded', function() {
-        const canvas = document.getElementById('signature-pad');
-        signaturePad = new SignaturePad(canvas, {
-            backgroundColor: 'rgb(255, 255, 255)',
-            penColor: 'rgb(0, 0, 0)'
-        });
-    });
-    
-    function clearSignature() {
-        signaturePad.clear();
+document.addEventListener('DOMContentLoaded', async function() {
+    // 🛑 IMPORTANTE: Usar 'charla.id' o 'charla_id' según lo que pase tu vista. 
+    // Basado en tu última vista, deberías usar 'charla.id'.
+    const charlaId = "{{ charla.id }}"; 
+    const token = localStorage.getItem('access_token');
+    let cuestionarioId = null;
+
+    if (!token) {
+        window.location.href = '/login/';
+        return;
     }
-    
-    async function saveSignature() {
-        if (signaturePad.isEmpty()) {
-            document.getElementById('firma-result').innerHTML = `
-                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                    ❌ Por favor, dibuja tu firma antes de guardar
-                </div>
-            `;
-            return;
+
+    const loader = document.getElementById('loading-quiz');
+    const bloqueFirma = document.getElementById('bloque-firma');
+
+    // ----------------------------------------------------
+    // 1. CARGAR CUESTIONARIO DESDE API
+    // ----------------------------------------------------
+    try {
+        const response = await fetch(`/api/cuestionarios/charla/${charlaId}/`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            // Cuestionario encontrado: Cargar preguntas
+            const quiz = await response.json();
+            cuestionarioId = quiz.id;
+            
+            // Renderizar info básica
+            document.getElementById('quiz-aprobacion').textContent = quiz.aprobacion_minima;
+            
+            // Renderizar preguntas
+            const container = document.getElementById('preguntas-render');
+            quiz.preguntas.forEach((preg, index) => {
+                const html = `
+                    <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
+                        <p class="font-bold text-lg text-gray-800 mb-4">
+                            <span class="text-indigo-600 mr-2">P${index + 1}.</span>${preg.texto}
+                        </p>
+                        <div class="space-y-3">
+                            ${preg.opciones.map(op => `
+                                <label class="flex items-center space-x-3 p-3 rounded-lg bg-white border border-gray-200 hover:border-indigo-400 cursor-pointer transition shadow-sm hover:shadow-md">
+                                    <input type="radio" name="pregunta_${preg.id}" value="${op.id}" class="h-5 w-5 text-indigo-600 focus:ring-indigo-500" required>
+                                    <span class="text-gray-700">${op.texto}</span>
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += html;
+            });
+
+            loader.classList.add('hidden');
+            document.getElementById('quiz-container').classList.remove('hidden');
+
+        } else if (response.status === 404) {
+            // CUESTIONARIO NO ENCONTRADO (ESTO CAUSA EL DESBLOQUEO INMEDIATO SI NO HAY QUIZ EN DB)
+            loader.innerHTML = '<p class="text-green-600 font-bold">✅ Esta charla no requiere cuestionario.</p>';
+            desbloquearFirma(true); 
+
+        } else {
+             // OTRO ERROR
+            loader.innerHTML = '<p class="text-red-500">❌ Error cargando el cuestionario.</p>';
+            // Firma permanece bloqueada
         }
+    } catch (error) {
+        console.error("Fallo grave al intentar cargar el quiz:", error);
+        loader.innerHTML = '<p class="text-red-500 font-bold">❌ Error de conexión. No se pudo validar el cuestionario.</p>';
+        // Firma permanece bloqueada
+    }
+
+    // ----------------------------------------------------
+    // 2. ENVIAR RESPUESTAS Y EVALUAR
+    // ----------------------------------------------------
+    document.getElementById('form-quiz')?.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        if(!cuestionarioId) return;
+
+        const respuestas = [];
+        const formData = new FormData(e.target);
         
-        // Obtener imagen en base64
-        const signatureData = signaturePad.toDataURL();
-        
-        // Enviar a API
-        const token = localStorage.getItem('access_token');
-        const charlaId = {charla_id };
-    
+        for (let [name, value] of formData.entries()) {
+            if (name.startsWith('pregunta_')) {
+                const pid = name.split('_')[1];
+                respuestas.push({ pregunta_id: parseInt(pid), opcion_id: parseInt(value) });
+            }
+        }
+
         try {
-            const response = await fetch('/api/asistencias/firmar/', {
+            const btnSubmit = e.target.querySelector('button[type="submit"]');
+            const textoOriginal = btnSubmit.innerText;
+            btnSubmit.innerHTML = 'Evaluando... ⏳';
+            btnSubmit.disabled = true;
+
+            const res = await fetch(`/api/cuestionarios/${cuestionarioId}/responder/`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    charla_id: charlaId,
-                    firma_data: signatureData
-                })
+                body: JSON.stringify({ respuestas: respuestas })
             });
-            
-            const result = await response.json();
-            
-            if (response.ok) {
-                document.getElementById('firma-result').innerHTML = `
-                    <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-                        ✅ ¡Firma guardada exitosamente!
-                        <div class="mt-2">
-                            <a href="/dashboard/trabajador/" class="text-green-800 font-bold hover:underline">
-                                Volver al dashboard →
-                            </a>
-                        </div>
-                    </div>
-                `;
-                signaturePad.clear();
+
+            const resultado = await res.json();
+            const resultDiv = document.getElementById('quiz-result');
+            resultDiv.classList.remove('hidden');
+
+            if (resultado.aprobado) {
+                // ✅ APROBADO: Desbloquea la firma
+                resultDiv.className = "mt-6 p-6 rounded-lg bg-green-100 text-green-800 border-2 border-green-400 animate-pulse";
+                resultDiv.innerHTML = `<div class="text-4xl mb-2">🎉</div><h3 class="text-2xl font-bold">¡Aprobado!</h3><p class="text-lg mt-2">Tu puntaje: <strong>${resultado.puntaje}%</strong></p>`;
+                
+                document.getElementById('form-quiz').style.opacity = '0.5';
+                document.getElementById('form-quiz').style.pointerEvents = 'none';
+                
+                desbloquearFirma(); // <--- LLAMADA CLAVE PARA DESBLOQUEAR
+
             } else {
-                document.getElementById('firma-result').innerHTML = `
-                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                        ❌ ${result.error || 'Error al guardar la firma'}
-                    </div>
-                `;
+                // ❌ REPROBADO: Permite reintentar
+                btnSubmit.innerText = textoOriginal;
+                btnSubmit.disabled = false;
+                resultDiv.className = "mt-6 p-6 rounded-lg bg-red-50 text-red-800 border-2 border-red-200";
+                resultDiv.innerHTML = `<div class="text-4xl mb-2">❌</div><h3 class="text-xl font-bold">No Aprobado</h3><p class="mt-1">Obtuviste: <strong>${resultado.puntaje}%</strong></p><p class="text-sm mt-2">¡Inténtalo de nuevo!</p>`;
             }
+
         } catch (error) {
-            console.error('Error:', error);
-            document.getElementById('firma-result').innerHTML = `
-                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                    ❌ Error de conexión. Intenta nuevamente.
-                </div>
-            `;
-        }
-    }
-    
-    // Mostrar info de la charla
-    document.body.addEventListener('htmx:afterSwap', function(evt) {
-        if (evt.detail.target.id === 'charla-info') {
-            const charla = JSON.parse(evt.detail.xhr.responseText);
-            evt.detail.target.innerHTML = `
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-4">${charla.tema}</h2>
-                    <div class="grid grid-cols-2 gap-4 text-gray-700">
-                        <div>
-                            <span class="font-medium">📅 Fecha:</span> ${charla.fecha}
-                        </div>
-                        <div>
-                            <span class="font-medium">⏰ Hora:</span> ${charla.hora}
-                        </div>
-                        <div class="col-span-2">
-                            <span class="font-medium">👷 Supervisor:</span> ${charla.supervisor_detalle.first_name} ${charla.supervisor_detalle.last_name}
-                        </div>
-                    </div>
-                </div>
-            `;
+            alert("Error al enviar respuestas");
+            e.target.querySelector('button').disabled = false;
         }
     });
+
+    // ----------------------------------------------------
+    // 3. LÓGICA DE FIRMA (ASISTENCIA) - FUSIONADO CON PIN
+    // ----------------------------------------------------
+    
+    function desbloquearFirma(sinCuestionario = false) {
+        const bloque = document.getElementById('bloque-firma');
+        const btn = document.getElementById('btn-firmar');
+        const pinInput = document.getElementById('rut_pass_code');
+        const resultDiv = document.getElementById('firma-result');
+        
+        // --- EFECTOS VISUALES DE DESBLOQUEO ---
+        bloque.classList.remove('opacity-40', 'pointer-events-none', 'grayscale');
+        bloque.classList.add('ring-4', 'ring-green-200', 'bg-green-50');
+        bloque.querySelector('.text-5xl').textContent = '✅';
+        bloque.querySelector('h2').textContent = '¡Todo listo para firmar!';
+        
+        btn.disabled = false;
+        btn.classList.remove('bg-gray-400', 'cursor-not-allowed');
+        btn.classList.add('bg-green-600', 'hover:bg-green-700', 'shadow-lg');
+        btn.innerHTML = '<span>✍️ FIRMAR ASISTENCIA AHORA</span>';
+
+        if (sinCuestionario) {
+            bloque.querySelector('p').textContent = 'Esta charla no requiere cuestionario. Valida tu identidad y firma.';
+        }
+        
+        // --- EVENTO CLICK PARA FIRMAR (USANDO PIN) ---
+        btn.onclick = async () => {
+            const pinCode = pinInput.value;
+            
+            // Validación del lado del cliente
+            if (pinCode.length !== 4 || !/^\d{4}$/.test(pinCode)) {
+                resultDiv.innerHTML = `<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">❌ Ingresa 4 dígitos numéricos para firmar.</div>`;
+                return;
+            }
+
+            try {
+                // 🔒 Petición al endpoint de firma con el PIN
+                const res = await fetch(`/api/asistencias/firmar/`, {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        charla_id: charlaId,
+                        rut_pin: pinCode // Aquí se envía el PIN para que Django lo valide
+                    })
+                });
+                
+                const data = await res.json();
+                
+                if (res.ok) {
+                    bloque.innerHTML = `
+                        <div class="text-center py-8">
+                            <div class="text-6xl mb-4 animate-bounce">✨</div>
+                            <h2 class="text-3xl font-bold text-green-700 mb-2">¡Asistencia Firmada!</h2>
+                            <p class="text-green-600 mb-6">Tu participación ha sido registrada correctamente.</p>
+                            <a href="/dashboard/trabajador/" class="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-blue-700 transition">
+                                Volver al Dashboard
+                            </a>
+                        </div>
+                    `;
+                } else {
+                    // PIN incorrecto u otro error del backend (400)
+                    resultDiv.innerHTML = `<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">❌ ${data.error || 'Error al validar PIN.'}</div>`;
+                }
+            } catch (e) {
+                resultDiv.innerHTML = `<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">❌ Error de conexión al registrar.</div>`;
+            }
+        };
+    }
+});
 </script>
 {% endblock %}

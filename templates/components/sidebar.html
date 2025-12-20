@@ -7,8 +7,17 @@
             <div class="h-12 bg-gray-200 rounded-lg"></div>
         </div>
     </nav>
+    <div class="absolute bottom-0 left-0 w-full p-2 border-t border-gray-200">
+        <button id="sidebar-toggle" class="flex items-center justify-center w-full px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition">
+            <svg id="toggle-icon" class="w-5 h-5 transform transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+            </svg>
+            <span id="toggle-text" class="ml-3 font-medium transition-opacity duration-150">Minimizar</span>
+        </button>
+    </div>
 </aside>
-
+<main id="main-content" class="ml-64 p-8 transition-all duration-300">
+    </main>
 <script>
     // Cargar menú según rol del usuario
     (function() {
@@ -113,4 +122,95 @@
             console.error('Error loading sidebar:', e);
         }
     })();
+    // LÓGICA DE MINIMIZAR SIDEBAR
+    // -----------------------------------------------------------------
+    const sidebar = document.getElementById('sidebar');
+    const mainContent = document.getElementById('main-content');
+    const toggleButton = document.getElementById('sidebar-toggle');
+    const toggleIcon = document.getElementById('toggle-icon');
+    const toggleText = document.getElementById('toggle-text');
+    const menuItems = document.getElementById('sidebar-menu');
+
+    // Clases que definen el estado
+    const SIDEBAR_MIN_CLASS = 'w-16';
+    const SIDEBAR_MAX_CLASS = 'w-64';
+    const CONTENT_MIN_CLASS = 'ml-16'; // Debe coincidir con el ancho mínimo
+    const CONTENT_MAX_CLASS = 'ml-64'; // Debe coincidir con el ancho máximo
+    const ICON_ROTATED_CLASS = 'rotate-180';
+    
+    // Clases para ocultar/mostrar texto en el sidebar
+    const TEXT_VISIBLE_CLASS = 'flex';
+    const TEXT_HIDDEN_CLASS = 'hidden';
+
+    function toggleSidebar() {
+        if (!sidebar || !mainContent) return;
+        
+        const isMinimized = sidebar.classList.contains(SIDEBAR_MIN_CLASS);
+        
+        // 1. Alternar clases del Sidebar (w-64 <-> w-16)
+        sidebar.classList.toggle(SIDEBAR_MAX_CLASS);
+        sidebar.classList.toggle(SIDEBAR_MIN_CLASS);
+        
+        // 2. Alternar margen del Contenido Principal (ml-64 <-> ml-16)
+        mainContent.classList.toggle(CONTENT_MAX_CLASS);
+        mainContent.classList.toggle(CONTENT_MIN_CLASS);
+        
+        // 3. Rotar ícono y cambiar texto
+        toggleIcon.classList.toggle(ICON_ROTATED_CLASS);
+        toggleText.textContent = isMinimized ? 'Minimizar' : 'Expandir';
+        
+        // 4. Ocultar/Mostrar texto de los ítems del menú (Ajuste visual)
+        // Damos un pequeño delay para que la transición de ancho se vea bien.
+        setTimeout(() => {
+             // Esconder/Mostrar el texto del menú (span.font-medium)
+             const textSpans = menuItems.querySelectorAll('span.font-medium');
+             textSpans.forEach(span => {
+                 span.classList.toggle(TEXT_HIDDEN_CLASS);
+                 span.classList.toggle(TEXT_VISIBLE_CLASS);
+             });
+        }, isMinimized ? 300 : 100); // 300ms cuando se minimiza, 100ms cuando se expande
+        
+        // 5. Guardar estado en localStorage
+        localStorage.setItem('sidebarMinimized', !isMinimized);
+    }
+    
+    // Función para aplicar el estado al cargar la página
+    function applySidebarState() {
+        const savedState = localStorage.getItem('sidebarMinimized') === 'true';
+        
+        // Asegúrate de que los elementos se encuentren antes de aplicar
+        if (savedState && sidebar && mainContent) {
+            
+            // Si el estado guardado es minimizado, aplicamos las clases de minimizado
+            // solo si el sidebar no está ya en el estado minimizado.
+            if (!sidebar.classList.contains(SIDEBAR_MIN_CLASS)) {
+                // Aplicar las clases opuestas a las bases para minimizar
+                sidebar.classList.remove(SIDEBAR_MAX_CLASS);
+                sidebar.classList.add(SIDEBAR_MIN_CLASS);
+                
+                mainContent.classList.remove(CONTENT_MAX_CLASS);
+                mainContent.classList.add(CONTENT_MIN_CLASS);
+                
+                toggleIcon.classList.add(ICON_ROTATED_CLASS);
+                toggleText.textContent = 'Expandir';
+                
+                // Ocultar texto al cargar
+                const textSpans = menuItems.querySelectorAll('span.font-medium');
+                textSpans.forEach(span => {
+                     span.classList.remove(TEXT_VISIBLE_CLASS);
+                     span.classList.add(TEXT_HIDDEN_CLASS);
+                });
+            }
+        }
+    }
+
+    // Listener para el botón de alternar
+    document.addEventListener('DOMContentLoaded', function() {
+        if (toggleButton) {
+            toggleButton.addEventListener('click', toggleSidebar);
+        }
+        
+        // Aplicar el estado guardado al inicio (se ejecutará una vez que el DOM esté listo)
+        applySidebarState();
+    });
 </script>

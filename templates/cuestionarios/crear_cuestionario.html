@@ -6,10 +6,11 @@
 <div class="max-w-4xl mx-auto">
     <div class="bg-white rounded-xl shadow-md p-8">
         <h1 class="text-3xl font-bold text-gray-900 mb-6">📝 Nuevo Cuestionario</h1>
-        
         <!-- Formulario -->
         <form id="cuestionario-form" class="space-y-6">
-            
+            <input type="hidden" name="charla" id="charla_input">
+    <div>
+        
             <!-- Charla 
             <div>
                 <label class="block text-gray-700 font-medium mb-2">Charla</label>
@@ -35,28 +36,55 @@
             </div>
             
             <!-- Preguntas dinámicas -->
-            <div id="preguntas-container" class="space-y-4"></div>
+<div id="preguntas-container" class="space-y-6 mb-8"></div>
             
-            <button type="button" id="agregar-pregunta"
-                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">
-                ➕ Agregar Pregunta
-            </button>
+            <div class="flex justify-center py-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 transition-colors cursor-pointer group">
+                
+                <button type="button" id="agregar-pregunta"
+                        class="text-blue-600 font-bold px-4 py-2 rounded-lg flex items-center group-hover:text-blue-700 transition">
+                    <span class="text-2xl mr-2">➕</span> Agregar Nueva Pregunta
+                </button>
+            </div>
             
-            <!-- Resultado -->
-            <div id="form-result"></div>
+            <hr class="my-8 border-gray-200">
+
+            <div id="form-result" class="mb-4"></div>
             
-            <!-- Botón de enviar -->
-            <button type="submit"
-                    class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg">
-                ✅ Crear Cuestionario
-            </button>
-            <a href="/charlas/"></a>
+            <div class="flex flex-col md:flex-row gap-4">
+                <a href="/charlas/"
+                   class="flex-1 px-6 py-3 border border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-50 text-center transition">
+                    Cancelar
+                </a>
+
+                <button type="submit"
+                        class="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold py-3 px-6 rounded-lg shadow-lg transform hover:scale-[1.02] transition-all">
+                    ✅ Finalizar y Crear Cuestionario
+                </button>
+            </div>
         </form>
     </div>
 </div>
 
 <script>
 let preguntaCount = 0;
+
+// 1. AL CARGAR: Leer el ID de la charla de la URL
+document.addEventListener('DOMContentLoaded', function() {
+    // Busca los parámetros en la URL (ej: ?charla_id=14)
+    const urlParams = new URLSearchParams(window.location.search);
+    const charlaId = urlParams.get('charla_id');
+    
+    if (charlaId) {
+        // Si existe, lo ponemos en el input oculto
+        const inputCharla = document.getElementById('charla_input');
+        if (inputCharla) {
+            inputCharla.value = charlaId;
+        }
+    } else {
+        // Opcional: Avisar si no hay ID (solo para debugging)
+        console.warn("No se encontró charla_id en la URL");
+    }
+});
 
 // Función para agregar pregunta
 function agregarPregunta() {
@@ -75,12 +103,12 @@ function agregarPregunta() {
         <button type="button" class="agregar-opcion bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded">
             ➕ Agregar Opción
         </button>
+        <button type="button" onclick="this.parentElement.remove()" class="text-red-500 text-sm ml-2">Eliminar pregunta</button>
         <hr class="mt-3">
     `;
     
     document.getElementById('preguntas-container').appendChild(preguntaDiv);
     
-    // Evento para agregar opción dentro de esta pregunta
     const botonOpcion = preguntaDiv.querySelector('.agregar-opcion');
     botonOpcion.addEventListener('click', () => agregarOpcion(preguntaDiv));
 }
@@ -92,15 +120,16 @@ function agregarOpcion(preguntaDiv) {
     const opcionCount = opcionesDiv.children.length + 1;
     
     const opcionDiv = document.createElement('div');
-    opcionDiv.classList.add('flex', 'items-center', 'space-x-2');
+    opcionDiv.classList.add('flex', 'items-center', 'space-x-2', 'mt-2');
     opcionDiv.innerHTML = `
         <input type="text" name="pregunta_${preguntaId}_opcion_${opcionCount}" required
                class="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
                placeholder="Texto de la opción">
         <label class="flex items-center space-x-1">
-            <input type="checkbox" name="pregunta_${preguntaId}_opcion_${opcionCount}_correcta">
-            <span>Correcta</span>
+            <input type="radio" name="correcta_pregunta_${preguntaId}" required>
+            <span class="text-sm">Correcta</span>
         </label>
+        <button type="button" onclick="this.parentElement.remove()" class="text-red-500">🗑️</button>
     `;
     opcionesDiv.appendChild(opcionDiv);
 }
@@ -112,25 +141,62 @@ document.getElementById('cuestionario-form').addEventListener('submit', async fu
     e.preventDefault();
     
     const formData = new FormData();
-    formData.append('charla', document.querySelector('[name="charla"]').value);
+    
+    // CORRECCIÓN AQUÍ: Usamos el input oculto que creamos
+    const charlaInput = document.getElementById('charla_input');
+    
+    if (!charlaInput || !charlaInput.value) {
+        alert("Error: No se ha asociado una charla a este cuestionario.");
+        return;
+    }
+
+    formData.append('charla', charlaInput.value);
     formData.append('titulo', document.querySelector('[name="titulo"]').value);
     formData.append('aprobacion_minima', document.querySelector('[name="aprobacion_minima"]').value);
     
     // Construir preguntas y opciones
     const preguntas = [];
-    document.querySelectorAll('#preguntas-container > div').forEach(pregDiv => {
+    const preguntasDivs = document.querySelectorAll('#preguntas-container > div');
+    
+    if (preguntasDivs.length === 0) {
+        alert("Debes agregar al menos una pregunta.");
+        return;
+    }
+
+    let errorValidacion = false;
+
+    preguntasDivs.forEach(pregDiv => {
         const pid = pregDiv.getAttribute('data-pregunta-id');
-        const texto = pregDiv.querySelector(`input[name="pregunta_${pid}"]`).value;
+        const inputTexto = pregDiv.querySelector(`input[name="pregunta_${pid}"]`);
         
+        if(!inputTexto) return; // Skip si algo falló
+        
+        const texto = inputTexto.value;
         const opciones = [];
-        pregDiv.querySelectorAll('.opciones > div').forEach((opDiv, idx) => {
-            const textoOpcion = opDiv.querySelector(`input[name="pregunta_${pid}_opcion_${idx+1}"]`).value;
-            const esCorrecta = opDiv.querySelector(`input[name="pregunta_${pid}_opcion_${idx+1}_correcta"]`).checked;
-            opciones.push({texto: textoOpcion, es_correcta: esCorrecta});
+        let tieneCorrecta = false;
+
+        pregDiv.querySelectorAll('.opciones > div').forEach((opDiv) => {
+            // Buscamos inputs dentro del div de opción
+            const inputText = opDiv.querySelector('input[type="text"]');
+            const inputCheck = opDiv.querySelector('input[type="radio"], input[type="checkbox"]');
+            
+            if (inputText && inputCheck) {
+                opciones.push({
+                    texto: inputText.value, 
+                    es_correcta: inputCheck.checked
+                });
+                if (inputCheck.checked) tieneCorrecta = true;
+            }
         });
         
+        if (!tieneCorrecta) errorValidacion = true;
         preguntas.push({texto: texto, opciones: opciones});
     });
+
+    if (errorValidacion) {
+        alert("Cada pregunta debe tener al menos una opción marcada como correcta.");
+        return;
+    }
     
     formData.append('preguntas', JSON.stringify(preguntas));
     
@@ -149,12 +215,12 @@ document.getElementById('cuestionario-form').addEventListener('submit', async fu
         if (response.ok) {
             document.getElementById('form-result').innerHTML = `
                 <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-                    ✅ Cuestionario creado correctamente.
+                    ✅ Cuestionario creado correctamente. Redirigiendo...
                 </div>
             `;
-            e.target.reset();
-            document.getElementById('preguntas-container').innerHTML = '';
-            preguntaCount = 0;
+            setTimeout(() => {
+                window.location.href = '/charlas/';
+            }, 2000);
         } else {
             document.getElementById('form-result').innerHTML = `
                 <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">

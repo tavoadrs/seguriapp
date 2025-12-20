@@ -5,6 +5,7 @@ from django.utils import timezone
 from .models import ControlAcceso
 from .serializers import ControlAccesoSerializer
 from users.permissions import IsAdmin
+from django.db.models import Q
 
 class ControlAccesoViewSet(viewsets.ModelViewSet):
     queryset = ControlAcceso.objects.select_related('usuario').all()
@@ -16,11 +17,56 @@ class ControlAccesoViewSet(viewsets.ModelViewSet):
         return super().get_permissions()
     
     def get_queryset(self):
+        # 1. Aplicar filtro base de permisos (trabajador solo ve sus accesos)
         user = self.request.user
+        queryset = ControlAcceso.objects.select_related('usuario').all()
+        
         if user.is_trabajador:
-            return ControlAcceso.objects.filter(usuario=user)
-        return ControlAcceso.objects.all()
-    
+            queryset = queryset.filter(usuario=user)
+        
+        # 2. Obtener parámetros de consulta
+        params = self.request.query_params
+
+
+        
+        # --- LÓGICA DE FILTROS ---
+        
+        # A. FILTRO POR NOMBRE/RUT (search)
+        search_term = params.get('search')
+        if search_term:
+            # Usamos Q objects para buscar en múltiples campos (first_name, last_name, rut)
+            queryset = queryset.filter(
+                Q(usuario__first_name__icontains=search_term) |
+                Q(usuario__last_name__icontains=search_term) |
+                Q(usuario__rut__icontains=search_term)
+            )
+
+        # B. FILTRO POR FECHA (fecha)
+        fecha_str = params.get('fecha')
+
+
+        if fecha_str:
+            try:
+                # El Front-end envía YYYY-MM-DD
+                queryset = queryset.filter(hora_entrada__date=fecha_str)
+
+            except ValueError:
+                pass# Opcional: manejar si el formato de fecha es incorrecto
+
+        
+        # C. FILTRO POR ESTADO (estado)
+        estado = params.get('estado')
+        if estado == 'en_sitio':
+            queryset = queryset.filter(hora_salida__isnull=True)
+        elif estado == 'salio':
+            queryset = queryset.filter(hora_salida__isnull=False)
+
+        return queryset.order_by('-hora_entrada') # Ordenar por hora más reciente
+
+
+    # El método accesos_hoy es REDUNDANTE si usamos el filtro 'fecha' en get_queryset
+    # Se recomienda que el Front-end llame a /api/accesos/?fecha=YYYY-MM-DD
+    # Si quieres mantenerlo por separado, modifícalo para que también use los filtros:
     @action(detail=False, methods=['post'])
     def registrar_entrada(self, request):
         """Registra la entrada de un trabajador"""
@@ -67,12 +113,30 @@ class ControlAccesoViewSet(viewsets.ModelViewSet):
         serializer = ControlAccesoSerializer(accesos, many=True)
         return Response(serializer.data)
     
+# apps/accesos/views.py
+
+# ... (resto de imports y la clase ControlAccesoViewSet) ...
+
     @action(detail=False, methods=['get'])
     def accesos_hoy(self, request):
-        """Obtiene los accesos del día actual"""
-        from django.utils import timezone
-        hoy = timezone.now().date()
+        """Obtiene los accesos del día actual con formato paginado."""
         
+        # Usamos localdate para obtener la fecha de hoy en la zona horaria de Django
+        hoy = timezone.localdate()
+        
+        # 1. Obtiene el queryset base filtrado por permisos, y luego aplica el filtro de fecha
+        #    IMPORTANTE: get_queryset ya aplica el filtro de Trabajador.
         queryset = self.get_queryset().filter(hora_entrada__date=hoy)
+        
+        # 2. APLICA PAGINACIÓN A LA RESPUESTA
+        #    Esto transforma el queryset en una página de resultados con metadatos (count, next, previous)
+        page = self.paginate_queryset(queryset)
+        
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            # Devuelve la respuesta paginada con la estructura {count: X, results: [...]}
+            return self.get_paginated_response(serializer.data)
+        
+        # 3. Caso de fallback (si la paginación no está activa, aunque debería estarlo)
         serializer = ControlAccesoSerializer(queryset, many=True)
         return Response(serializer.data)

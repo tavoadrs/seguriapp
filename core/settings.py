@@ -158,6 +158,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:8081",
     "http://localhost:19006",
+    
 ]
 
 # Firebase

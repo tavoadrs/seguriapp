@@ -118,9 +118,13 @@
         }
         
         if (evt.detail.target.id === 'accesos-hoy') {
-            const accesos = JSON.parse(evt.detail.xhr.responseText);
+            const response = JSON.parse(evt.detail.xhr.responseText); // response es el objeto paginado
             
-            if (accesos.length > 0) {
+            // ✅ CORRECCIÓN: Accedemos al array real que está en 'results'
+            const accesos = response.results;
+            
+            // ✅ CORRECCIÓN: Comprobamos la longitud del array 'accesos'
+            if (accesos && accesos.length > 0) {
                 evt.detail.target.innerHTML = `
                     <table class="min-w-full">
                         <thead class="bg-gray-50">

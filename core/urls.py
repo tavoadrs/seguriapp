@@ -54,6 +54,7 @@ urlpatterns = [
     path('charlas/', views.listar_charlas, name='listar_charlas'),
     path('charlas/crear/', views.crear_charla, name='crear_charla'),
     path('charlas/<int:charla_id>/', views.detalle_charla, name='detalle_charla'),
+
     path('charlas/<int:charla_id>/firmar/', views.firmar_charla, name='firmar_charla'),
     
     # Cuestionarios
