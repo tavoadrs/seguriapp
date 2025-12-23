@@ -17,7 +17,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['*','localhost','127.0.0.1','subservient-spatteringly-shanice.ngrok-free.dev']
+ALLOWED_HOSTS = ['*','localhost','127.0.0.1','subservient-spatteringly-shanice.ngrok-free.dev',".railway.app",]
 
 
 
@@ -153,12 +153,18 @@ SIMPLE_JWT = {
 }
 
 # CORS
-CORS_ALLOW_ALL_ORIGINS = DEBUG
+CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:8081",
     "http://localhost:19006",
+
+    # Railway
+    "https://*.railway.app",
     
+]
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.railway\.app$",
 ]
 
 # Firebase
@@ -175,7 +181,7 @@ LOGIN_URL = '/login'
 # Permite que las peticiones desde ngrok sean aceptadas
 CSRF_TRUSTED_ORIGINS = [
 'https://subservient-spatteringly-shanice.ngrok-free.dev',
-'http://127.0.0.1:8000'
+'http://127.0.0.1:8000',"https://*.railway.app",
 
 ]
 
