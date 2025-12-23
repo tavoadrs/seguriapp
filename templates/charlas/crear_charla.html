@@ -7,145 +7,88 @@
     <div class="bg-white rounded-xl shadow-md p-8">
         <h1 class="text-3xl font-bold text-gray-900 mb-6">📚 Nueva Charla de Seguridad</h1>
         
-        <!-- Formulario -->
         <form id="charla-form" class="space-y-6">
-            
-            <!-- Tema -->
             <div>
                 <label class="block text-gray-700 font-medium mb-2">Tema de la Charla</label>
-                <input 
-                    type="text" 
-                    name="tema" 
-                    required
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Ej: Uso correcto de EPP en altura">
+                <input type="text" name="tema" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Ej: Uso correcto de EPP en altura">
             </div>
             
-            <!-- Fecha -->
-            <div>
-                <label class="block text-gray-700 font-medium mb-2">Fecha</label>
-                <input 
-                    type="date" 
-                    name="fecha" 
-                    required
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Fecha</label>
+                    <input type="date" name="fecha" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+                
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Hora</label>
+                    <input type="time" name="hora" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
             </div>
             
-            <!-- Hora -->
-            <div>
-                <label class="block text-gray-700 font-medium mb-2">Hora</label>
-                <input 
-                    type="time" 
-                    name="hora" 
-                    required
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-            </div>
-            
-            <!-- Archivo Adjunto -->
             <div>
                 <label class="block text-gray-700 font-medium mb-2">Archivo Adjunto (Opcional)</label>
                 <div class="flex items-center space-x-4">
-                    <input 
-                        type="file" 
-                        id="archivo_adjunto"
-                        name="archivo_adjunto"
-                        accept=".pdf,.docx,.doc,.ppt,.pptx"
-                        class="hidden">
-                    
-                    <button 
-                        type="button"
-                        onclick="document.getElementById('archivo_adjunto').click()"
-                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg transition">
-                        📎 Seleccionar Archivo
-                    </button>
-                    
+                    <input type="file" id="archivo_adjunto" name="archivo_adjunto" accept=".pdf,.docx,.doc,.ppt,.pptx" class="hidden">
+                    <button type="button" onclick="document.getElementById('archivo_adjunto').click()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg transition">📎 Seleccionar Archivo</button>
                     <span id="archivo-nombre" class="text-gray-600 text-sm">No hay archivo seleccionado</span>
                 </div>
-                <p class="text-gray-500 text-xs mt-1">Formatos permitidos: PDF, DOCX, PPT (máximo 10MB)</p>
             </div>
 
-            <!-- Crear cuestionario 
-             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <a href="/cuestionarios/crear" class=" bg-blue-600 hover:bg-blue-700 text-white rounded-xl p-6 transition group">
-                    <div>
-                        <p class="text-1xl font-bold mt-1"> Crear cuestionario</p>
-                    </div>
-                    <div class = "text-1xl group-hover:scale-110 transition "➕></div>
-                </a>
-             </div>
-              -->
+            <div id="form-result" class="mb-6"></div>
             
-            <!-- Resultado -->
-    <div id="form-result" class="mb-6"></div>
-            
-            <div class="flex flex-col space-y-4 md:flex-row md:space-y-0 md:space-x-4">
-                
-                <button 
-                    type="submit"
-                    onclick="setNextAction('lista')"
-                    class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition shadow-md">
-                    ✅ Crear y Finalizar
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button type="submit" onclick="setActions('BORRADOR', 'lista')" 
+                    class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 rounded-lg transition shadow-md">
+                    💾 Guardar en Repertorio
+                </button>
+
+                <button type="submit" onclick="setActions('ENVIADA', 'lista')" 
+                    class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition shadow-md">
+                    🚀 Enviar a Trabajadores
                 </button>
                 
-                <button 
-                    type="submit"
-                    onclick="setNextAction('cuestionario')"
-                    class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition shadow-md flex justify-center items-center">
-                    <span>📝 Guardar y Crear Cuestionario</span>
+                <button type="submit" onclick="setActions('BORRADOR', 'cuestionario')" 
+                    class="md:col-span-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition shadow-md">
+                    📝 Guardar y Crear Cuestionario
                 </button>
             </div>
 
             <div class="mt-6 text-center">
-                <a 
-                    href="/charlas/"
-                    class="text-gray-500 hover:text-red-600 font-medium transition duration-200">
-                    Cancelar operación
-                </a>
+                <a href="/charlas/" class="text-gray-500 hover:text-red-600 font-medium transition duration-200">Cancelar operación</a>
             </div>
         </form>
     </div>
 </div>
 
 <script>
-    // 1. VARIABLE DE ESTADO: Controla a dónde ir después de guardar
+    // Variables de control
     let nextAction = 'lista'; 
+    let selectedStatus = 'BORRADOR'; // Por defecto es borrador
 
-    // 2. FUNCIÓN DE CONTROL: Los botones del HTML llamarán a esto
-    function setNextAction(action) {
+    function setActions(status, action) {
+        selectedStatus = status;
         nextAction = action;
     }
 
-    // Mostrar nombre del archivo seleccionado (Igual que antes)
     document.getElementById('archivo_adjunto').addEventListener('change', function(e) {
         const fileName = e.target.files[0]?.name || 'No hay archivo seleccionado';
         document.getElementById('archivo-nombre').textContent = fileName;
     });
     
-    // Enviar formulario
     document.getElementById('charla-form').addEventListener('submit', async function(e) {
         e.preventDefault();
         
-        // Obtener datos del usuario actual
         const userInfo = localStorage.getItem('user_info');
-        if (!userInfo) {
-            document.getElementById('form-result').innerHTML = `
-                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                    ❌ Error: No se pudo obtener información del usuario
-                </div>
-            `;
-            return;
-        }
-        
+        if (!userInfo) return;
         const user = JSON.parse(userInfo);
         
-        // Crear FormData
         const formData = new FormData();
         formData.append('tema', document.querySelector('[name="tema"]').value);
         formData.append('fecha', document.querySelector('[name="fecha"]').value);
         formData.append('hora', document.querySelector('[name="hora"]').value);
         formData.append('supervisor', user.id);
+        formData.append('estado', selectedStatus); // <--- ENVIAMOS EL ESTADO SELECCIONADO
         
-        // Agregar archivo si existe
         const archivoInput = document.getElementById('archivo_adjunto');
         if (archivoInput.files.length > 0) {
             formData.append('archivo_adjunto', archivoInput.files[0]);
@@ -156,64 +99,35 @@
         try {
             const response = await fetch('/api/charlas/', {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
+                headers: { 'Authorization': `Bearer ${token}` },
                 body: formData
             });
             
             const result = await response.json();
             
             if (response.ok) {
-                // Mensaje de éxito visual
-                const mensajeExtra = nextAction === 'cuestionario' 
-                    ? 'Redirigiendo al creador de cuestionarios...' 
-                    : 'Guardado exitosamente.';
+                let msg = selectedStatus === 'ENVIADA' ? '¡Charla enviada a los trabajadores!' : 'Charla guardada en repertorio.';
+                if (nextAction === 'cuestionario') msg += ' Redirigiendo...';
 
                 document.getElementById('form-result').innerHTML = `
-                    <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-                        ✅ ¡Charla creada! ${mensajeExtra}
-                    </div>
+                    <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">✅ ${msg}</div>
                 `;
                 
-                // Limpiar formulario visualmente
-                e.target.reset();
-                
-                // 3. LÓGICA DE REDIRECCIÓN INTELIGENTE
                 setTimeout(() => {
                     if (nextAction === 'cuestionario') {
-                        // AQUÍ ESTÁ LA MAGIA: Pasamos el ID recién creado (result.id) a la siguiente página
                         window.location.href = `/cuestionarios/crear?charla_id=${result.id}`;
                     } else {
-                        // Flujo normal: volver a la lista
                         window.location.href = '/charlas/';
                     }
-                }, 1500); // Esperamos 1.5 segundos para que el usuario lea el mensaje
+                }, 1500);
 
             } else {
-                // Manejo de errores (Igual que antes)
-                let errorMessage = 'Error al crear la charla';
-                
-                if (result.tema) errorMessage = `Tema: ${result.tema[0]}`;
-                else if (result.fecha) errorMessage = `Fecha: ${result.fecha[0]}`;
-                else if (result.hora) errorMessage = `Hora: ${result.hora[0]}`;
-                else if (result.supervisor) errorMessage = `Supervisor: ${result.supervisor[0]}`;
-                else if (result.archivo_adjunto) errorMessage = `Archivo: ${result.archivo_adjunto[0]}`;
-                else if (result.detail) errorMessage = result.detail;
-                
                 document.getElementById('form-result').innerHTML = `
-                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                        ❌ ${errorMessage}
-                    </div>
+                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">❌ Error: ${JSON.stringify(result)}</div>
                 `;
             }
         } catch (error) {
             console.error('Error:', error);
-            document.getElementById('form-result').innerHTML = `
-                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                    ❌ Error de conexión. Intenta nuevamente.
-                </div>
-            `;
         }
     });
 </script>

@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 from django.conf import settings
+from django.utils import timezone  # <--- IMPORTANTE: Para manejar zonas horarias
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib import colors
 from reportlab.lib.units import inch
@@ -39,19 +40,14 @@ class PDFGeneratorService:
     def generate_charla_report(self, charla):
         """
         Genera un PDF con el reporte de una charla
-        
-        Args:
-            charla: Objeto Charla
-        
-        Returns:
-            str: Path del archivo PDF generado
         """
         # Crear directorio si no existe
         report_dir = os.path.join(settings.MEDIA_ROOT, 'reportes')
         os.makedirs(report_dir, exist_ok=True)
         
-        # Nombre del archivo
-        filename = f'charla_{charla.id}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf'
+        # Nombre del archivo (Usamos timezone.localtime para el nombre del archivo también)
+        ahora_local = timezone.localtime(timezone.now())
+        filename = f'charla_{charla.id}_{ahora_local.strftime("%Y%m%d_%H%M%S")}.pdf'
         filepath = os.path.join(report_dir, filename)
         
         # Crear documento
@@ -95,15 +91,18 @@ class PDFGeneratorService:
         asistencias = charla.asistencias.select_related('usuario').all()
         
         if asistencias.exists():
-            # Tabla de asistentes
             asistentes_data = [['N°', 'Nombre', 'RUT', 'Hora Firma']]
             
             for idx, asistencia in enumerate(asistencias, 1):
+                # --- CAMBIO CLAVE AQUÍ ---
+                # Convertimos la hora de firma de UTC a la hora local configurada en settings.py
+                hora_local = timezone.localtime(asistencia.hora_firma)
+                
                 asistentes_data.append([
                     str(idx),
                     asistencia.usuario.get_full_name(),
                     asistencia.usuario.rut,
-                    asistencia.hora_firma.strftime('%H:%M:%S')
+                    hora_local.strftime('%H:%M:%S') # Ahora mostrará la hora correcta
                 ])
             
             asistentes_table = Table(asistentes_data, colWidths=[0.5*inch, 2.5*inch, 1.5*inch, 1.5*inch])
@@ -123,7 +122,6 @@ class PDFGeneratorService:
             elements.append(asistentes_table)
             elements.append(Spacer(1, 0.3*inch))
             
-            # Resumen
             summary = Paragraph(
                 f"<b>Total de asistentes:</b> {asistencias.count()}",
                 self.styles['Normal']
@@ -138,9 +136,9 @@ class PDFGeneratorService:
         
         elements.append(Spacer(1, 0.5*inch))
         
-        # Footer
+        # Footer (También ajustamos la hora de generación del reporte)
         footer = Paragraph(
-            f"Reporte generado el {datetime.now().strftime('%d/%m/%Y a las %H:%M')}",
+            f"Reporte generado el {ahora_local.strftime('%d/%m/%Y a las %H:%M')}",
             ParagraphStyle('Footer', parent=self.styles['Normal'], 
                          fontSize=8, textColor=colors.grey, alignment=TA_CENTER)
         )

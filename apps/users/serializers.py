@@ -3,10 +3,12 @@ from apps.users.models import Usuario
 
 class UsuarioSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False)
+    #campo para mostrar el nombre en la tabla 
+    supervisor_nombre = serializers.ReadOnlyField(source='supervisor.get_full_name')
     
     class Meta:
         model = Usuario
-        fields = ['id', 'username', 'first_name', 'last_name', 'email', 'rut', 'rol', 'password']
+        fields = ['id', 'username', 'first_name', 'last_name', 'email', 'rut', 'rol', 'password','supervisor','supervisor_nombre']
         read_only_fields = ['id']
     
     def create(self, validated_data):

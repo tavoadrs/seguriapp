@@ -15,7 +15,7 @@ class CharlaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Charla
         fields = ['id', 'tema', 'fecha', 'hora', 'supervisor', 'supervisor_detalle','supervisor_nombre', 
-                  'archivo_adjunto', 'archivo_url', 'tiene_archivo','tiene_cuestionario', 'created_at']
+                  'archivo_adjunto', 'archivo_url', 'tiene_archivo','tiene_cuestionario', 'created_at','estado']
         read_only_fields = ['id', 'created_at']
     
     def get_archivo_url(self, obj):
@@ -63,7 +63,7 @@ class CharlaListSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Charla
-        fields = ['id', 'tema', 'fecha', 'hora', 'supervisor_nombre', 'tiene_archivo', 'archivo_url','tiene_cuestionario', 'created_at']
+        fields = ['id', 'tema', 'fecha', 'hora', 'supervisor_nombre', 'tiene_archivo', 'archivo_url','tiene_cuestionario', 'created_at','estado']
 
     # ✅ ESTAS FUNCIONES AHORA ESTÁN EN EL NIVEL CORRECTO
     def get_archivo_url(self,obj):

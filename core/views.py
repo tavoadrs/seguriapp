@@ -48,6 +48,13 @@ def firmar_charla(request, charla_id):
     return render(request, 'charlas/firmar_charla.html', {'charla': charla})
 
 #CUESTIONARIOS
+# core/views.py
+
+def detalle_cuestionario(request):
+    charla_id = request.GET.get('charla_id')
+    # Esta vista cargará el HTML donde el supervisor ve las preguntas ya creadas
+    return render(request, 'cuestionarios/detalle_cuestionario.html', {'charla_id': charla_id})
+
 def crear_cuestionario(request):
     """Formulario para crear cuestionarios"""
     return render(request,'cuestionarios/crear_cuestionario.html')

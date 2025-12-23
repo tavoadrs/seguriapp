@@ -4,248 +4,322 @@
 
 {% block content %}
 <div class="max-w-6xl mx-auto space-y-6">
-    <!-- Back button -->
     <a href="/charlas/" class="inline-flex items-center text-blue-600 hover:text-blue-700 font-medium">
         ← Volver a charlas
     </a>
     
-    <!-- Información de la Charla -->
     <div 
         id="charla-detalle"
         hx-get="/api/charlas/{{ charla_id }}/"
         hx-trigger="load"
-        hx-headers='{"Authorization": "Bearer " + localStorage.getItem("access_token")}'
         class="bg-white rounded-xl shadow-md p-8">
-        
         <div class="text-center py-12">
             <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
     </div>
-    
-    <!-- Asistentes -->
-    {% if user.rol in 'ADMIN,SUPERVISOR' %}
-    <div class="bg-white rounded-xl shadow-md p-6">
-        <div class="flex justify-between items-center mb-4">
-            <h2 class="text-2xl font-bold text-gray-900">👥 Asistentes</h2>
-            <button 
-                hx-get="/api/charlas/{{ charla_id }}/asistentes/"
-                hx-trigger="click"
-                hx-target="#asistentes-list"
-                hx-headers='{"Authorization": "Bearer " + localStorage.getItem("access_token")}'
-                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition">
-                🔄 Actualizar
-            </button>
-        </div>
+
+    <div id="panel-supervisor" style="display: none;" class="space-y-6">
         
-        <div 
-            id="asistentes-list"
-            hx-get="/api/charlas/{{ charla_id }}/asistentes/"
-            hx-trigger="load, every 5s"
-            hx-headers='{"Authorization": "Bearer " + localStorage.getItem("access_token")}'>
-            
-            <div class="text-center py-8">
-                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-6 mb-6">
+             <h2 class="text-xl font-bold text-indigo-900 mb-4">⚙️ Gestión de Contenido</h2>
+            <div class="flex gap-4">
+                <a id="btn-add-cuestionario" href="#" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold transition">
+                    📝 Gestionar Cuestionario
+                </a>
+                <button id="btn-edit-charla" class="bg-white border border-indigo-600 text-indigo-600 hover:bg-indigo-50 px-4 py-2 rounded-lg font-bold transition">
+                    ✏️ Editar Material y Datos
+                </button>
             </div>
         </div>
-    </div>
-    
-    <!-- Generar/Subir Reporte -->
-    <div class="bg-white rounded-xl shadow-md p-6">
-        <h2 class="text-2xl font-bold text-gray-900 mb-4">📄 Reporte PDF</h2>
-        
-        <div class="flex space-x-4">
-            <button 
-                hx-post="/api/reportes/generar_pdf/"
-                hx-vals='{"charla_id": {{ charla_id }}}'
-                hx-headers='{"Authorization": "Bearer " + localStorage.getItem("access_token")}'
-                hx-target="#reporte-status"
-                class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold transition">
-                📊 Generar PDF Automático
-            </button>
+
+        <div class="bg-white rounded-xl shadow-md p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-gray-900">👥 Asistentes</h2>
+                <button 
+                    hx-get="/api/charlas/{{ charla_id }}/asistentes/"
+                    hx-trigger="click"
+                    hx-target="#asistentes-list"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition">
+                    🔄 Actualizar
+                </button>
+            </div>
             
-            <button 
-                onclick="document.getElementById('pdf-upload').click()"
-                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-bold transition">
-                📤 Subir PDF Manual
-            </button>
+            <div 
+                id="asistentes-list"
+                hx-get="/api/charlas/{{ charla_id }}/asistentes/"
+                hx-trigger="load, every 10s"
+                class="bg-white">
+                <div class="text-center py-8">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>
+            </div>
         </div>
         
-        <input 
-            type="file" 
-            id="pdf-upload" 
-            accept="application/pdf" 
-            class="hidden"
-            onchange="uploadPDF(event)">
-        
-        <div id="reporte-status" class="mt-4"></div>
+        <div class="bg-white rounded-xl shadow-md p-6">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">📄 Reporte PDF</h2>
+            <div class="flex flex-wrap gap-4">
+                <button 
+                    onclick="generarReporteAutomatico()"
+                    class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold transition">
+                    📊 Generar PDF Automático
+                </button>
+                
+                <button 
+                    onclick="document.getElementById('pdf-upload').click()"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-bold transition">
+                    📤 Subir PDF Manual
+                </button>
+            </div>
+            
+            <input type="file" id="pdf-upload" accept="application/pdf" class="hidden" onchange="uploadPDF(event)">
+            <div id="reporte-status" class="mt-4"></div>
+        </div>
     </div>
-    {% endif %}
+</div>
+
+<div id="preview-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center z-50 p-4">
+    <div class="bg-white w-full max-w-5xl h-[90vh] rounded-xl overflow-hidden flex flex-col shadow-2xl">
+        <div class="p-4 border-b flex justify-between items-center bg-gray-50">
+            <h3 class="font-bold text-gray-800 flex items-center">📄 Vista Previa</h3>
+            <button onclick="cerrarPreview()" class="text-gray-500 hover:text-red-600 text-3xl font-bold">&times;</button>
+        </div>
+        <div class="flex-1 bg-gray-200">
+            <iframe id="pdf-frame" class="w-full h-full border-none" src=""></iframe>
+        </div>
+    </div>
+</div>
+
+<div id="edit-charla-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl p-8 max-w-lg w-full shadow-2xl">
+        <h3 class="text-2xl font-bold text-gray-900 mb-6">✏️ Editar Datos de Charla</h3>
+        <form id="edit-charla-form" class="space-y-4">
+            <div>
+                <label class="block text-gray-700 font-medium mb-1">Tema</label>
+                <input type="text" name="tema" id="edit-tema" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-gray-700 font-medium mb-1">Fecha</label>
+                    <input type="date" name="fecha" id="edit-fecha" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-1">Hora</label>
+                    <input type="time" name="hora" id="edit-hora" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+            <div>
+                <label class="block text-gray-700 font-medium mb-1">Cambiar Material Adjunto (PDF, PPT, DOCX)</label>
+                <input type="file" name="archivo_adjunto" id="edit-archivo" class="w-full px-2 py-1 border rounded-lg text-sm bg-gray-50">
+            </div>
+            <div class="flex space-x-3 mt-6">
+                <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700 transition">Guardar Cambios</button>
+                <button type="button" onclick="cerrarEditModal()" class="flex-1 bg-gray-500 text-white py-2 rounded-lg hover:bg-gray-600 transition">Cancelar</button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <script>
-    // Mostrar detalle de la charla
-    document.body.addEventListener('htmx:afterSwap', function(evt) {
-        if (evt.detail.target.id === 'charla-detalle') {
-            const charla = JSON.parse(evt.detail.xhr.responseText);
-            const userRole = '{{ user.rol }}';
-            
-            evt.detail.target.innerHTML = `
-                <div class="flex justify-between items-start">
-                    <div class="flex-1">
-                        <h1 class="text-3xl font-bold text-gray-900 mb-4">${charla.tema}</h1>
-                        
-                        <div class="grid grid-cols-2 gap-4 text-lg">
-                            <div class="bg-blue-50 p-4 rounded-lg">
-                                <p class="text-gray-600 font-medium">📅 Fecha</p>
-                                <p class="text-gray-900 font-bold">${charla.fecha}</p>
-                            </div>
-                            
-                            <div class="bg-blue-50 p-4 rounded-lg">
-                                <p class="text-gray-600 font-medium">⏰ Hora</p>
-                                <p class="text-gray-900 font-bold">${charla.hora}</p>
-                            </div>
-                            
-                            <div class="bg-blue-50 p-4 rounded-lg col-span-2">
-                                <p class="text-gray-600 font-medium">👷 Supervisor</p>
-                                <p class="text-gray-900 font-bold">${charla.supervisor_detalle.first_name} ${charla.supervisor_detalle.last_name}</p>
-                            </div>
-                            
-                            ${charla.tiene_archivo ? `
-                                <div class="bg-green-50 border border-green-200 p-4 rounded-lg col-span-2">
-                                    <p class="text-green-600 font-medium mb-2">📎 Archivo Adjunto</p>
-                                    <a href="${charla.archivo_url}" 
-                                       download
-                                       class="inline-block bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-bold transition">
-                                        📥 Descargar Archivo
-                                    </a>
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                    
-                    ${userRole === 'TRABAJADOR' ? `
-                        <a href="/charlas/${charla.id}/firmar/" 
-                           class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-bold transition">
-                             Firmar Asistencia
-                        </a>
-                    ` : ''}
-                </div>
-            `;
-        }
-        
-        if (evt.detail.target.id === 'asistentes-list') {
-            const asistentes = JSON.parse(evt.detail.xhr.responseText);
-            
-            if (asistentes.length > 0) {
-                evt.detail.target.innerHTML = `
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">RUT</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hora Firma</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-200">
-                                ${asistentes.map((asistente, index) => `
-                                    <tr class="hover:bg-gray-50">
-                                        <td class="px-6 py-4 text-sm text-gray-900">${index + 1}</td>
-                                        <td class="px-6 py-4 text-sm text-gray-900 font-medium">
-                                            ${asistente.usuario_detalle.first_name} ${asistente.usuario_detalle.last_name}
-                                        </td>
-                                        <td class="px-6 py-4 text-sm text-gray-600">${asistente.usuario_detalle.rut}</td>
-                                        <td class="px-6 py-4 text-sm text-gray-600">${new Date(asistente.hora_firma).toLocaleString()}</td>
-                                        <td class="px-6 py-4">
-                                            <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold">
-                                                ✅ Firmado
-                                            </span>
-                                        </td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                    <p class="mt-4 text-gray-600 font-medium">Total de asistentes: ${asistentes.length}</p>
-                `;
-            } else {
-                evt.detail.target.innerHTML = `
-                    <div class="text-center py-8">
-                        <p class="text-gray-600">No hay asistentes aún</p>
-                    </div>
-                `;
-            }
-        }
-        
-        if (evt.detail.target.id === 'reporte-status') {
-            if (evt.detail.xhr.status === 201) {
-                const reporte = JSON.parse(evt.detail.xhr.responseText);
-                evt.detail.target.innerHTML = `
-                    <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-                        ✅ PDF generado exitosamente
-                        <div class="mt-2">
-                            <a href="${reporte.pdf_url}" target="_blank" 
-                               class="text-green-800 font-bold hover:underline">
-                                📥 Descargar PDF →
-                            </a>
-                        </div>
-                    </div>
-                `;
-            }
+    // --- LÓGICA DE INICIO Y PERMISOS ---
+    document.addEventListener('DOMContentLoaded', function() {
+        const token = localStorage.getItem("access_token");
+        if (token) {
+            document.getElementById('panel-supervisor').style.display = 'block';
         }
     });
-    
-    // Upload manual de PDF
+
+    document.body.addEventListener('htmx:configRequest', (event) => {
+        const token = localStorage.getItem("access_token");
+        if (token) event.detail.headers['Authorization'] = `Bearer ${token}`;
+        event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+    });
+
+    // --- RENDERIZADO DETALLE Y GESTIÓN DINÁMICA ---
+    document.body.addEventListener('htmx:afterSwap', function(evt) {
+        if (evt.detail.target.id === 'charla-detalle') {
+            try {
+                const charla = JSON.parse(evt.detail.xhr.responseText);
+                
+                // Renderizar información principal
+                evt.detail.target.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <h1 class="text-3xl font-bold text-gray-900 mb-4">${charla.tema}</h1>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-lg">
+                                <div class="bg-blue-50 p-4 rounded-lg">
+                                    <p class="text-gray-600 text-sm">📅 Fecha</p>
+                                    <p class="text-gray-900 font-bold">${charla.fecha}</p>
+                                </div>
+                                <div class="bg-blue-50 p-4 rounded-lg">
+                                    <p class="text-gray-600 text-sm">⏰ Hora</p>
+                                    <p class="text-gray-900 font-bold">${charla.hora}</p>
+                                </div>
+                                <div class="bg-blue-50 p-4 rounded-lg md:col-span-2">
+                                    <p class="text-gray-600 text-sm">👷 Supervisor</p>
+                                    <p class="text-gray-900 font-bold">${charla.supervisor_detalle.first_name} ${charla.supervisor_detalle.last_name}</p>
+                                </div>
+                                ${charla.tiene_archivo ? `
+                                    <div class="bg-green-50 border border-green-200 p-4 rounded-lg md:col-span-2 flex justify-between items-center">
+                                        <div class="flex items-center">
+                                            <span class="text-green-700 font-bold mr-2">📎 Material Adjunto</span>
+                                        </div>
+                                        <div class="space-x-2">
+                                            <button onclick="abrirPreview('${charla.archivo_url}')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition">👁️ Ver</button>
+                                            <a href="${charla.archivo_url}" download class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition">📥 Descargar</a>
+                                        </div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>`;
+                   
+                // LÓGICA INTELIGENTE DE CUESTIONARIO
+                const btnCues = document.getElementById('btn-add-cuestionario');
+                if(btnCues) {
+                    if (charla.tiene_cuestionario) {
+                        btnCues.innerHTML = "👁️ Ver/Editar Cuestionario";
+                        btnCues.classList.replace('bg-indigo-600', 'bg-purple-600');
+                        btnCues.href = `/cuestionarios/detalle?charla_id=${charla.id}`;
+                    } else {
+                        btnCues.innerHTML = "📝 Crear Cuestionario";
+                        btnCues.href = `/cuestionarios/crear?charla_id=${charla.id}`;
+                    }
+                }
+
+                // HABILITAR BOTÓN DE EDICIÓN DE DATOS
+                const btnEdit = document.getElementById('btn-edit-charla');
+                if(btnEdit) {
+                    btnEdit.onclick = () => abrirEditModal(charla);
+                }
+                
+            } catch (e) { console.error("Error charla:", e); }
+        }
+        
+        // Renderizado de lista de asistentes
+        if (evt.detail.target.id === 'asistentes-list') {
+            try {
+                const asistentes = JSON.parse(evt.detail.xhr.responseText);
+                if (asistentes.length > 0) {
+                    evt.detail.target.innerHTML = `
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full text-sm text-left">
+                                <thead class="bg-gray-50 text-gray-500">
+                                    <tr><th class="px-4 py-2">Nombre</th><th class="px-4 py-2">RUT</th><th class="px-4 py-2">Estado</th></tr>
+                                </thead>
+                                <tbody class="divide-y">
+                                    ${asistentes.map(a => `
+                                        <tr>
+                                            <td class="px-4 py-3 font-medium">${a.usuario_detalle.first_name} ${a.usuario_detalle.last_name}</td>
+                                            <td class="px-4 py-3 text-gray-500">${a.usuario_detalle.rut}</td>
+                                            <td class="px-4 py-3 text-green-600 font-bold text-center">✅</td>
+                                        </tr>`).join('')}
+                                </tbody>
+                            </table>
+                        </div>`;
+                } else {
+                    evt.detail.target.innerHTML = `<p class="text-center text-gray-500 py-4">Sin asistentes registrados aún.</p>`;
+                }
+            } catch (e) { console.error("Error asistentes:", e); }
+        }
+    });
+
+    // --- FUNCIONES DE EDICIÓN ---
+    function abrirEditModal(charla) {
+        document.getElementById('edit-tema').value = charla.tema;
+        document.getElementById('edit-fecha').value = charla.fecha;
+        document.getElementById('edit-hora').value = charla.hora;
+        document.getElementById('edit-charla-modal').classList.remove('hidden');
+    }
+
+    function cerrarEditModal() {
+        document.getElementById('edit-charla-modal').classList.add('hidden');
+    }
+
+    document.getElementById('edit-charla-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const token = localStorage.getItem("access_token");
+
+        try {
+            const response = await fetch(`/api/charlas/{{ charla_id }}/`, {
+                method: 'PATCH',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+
+            if (response.ok) {
+                alert("Datos y material actualizados con éxito");
+                location.reload();
+            } else {
+                alert("Hubo un error al actualizar los datos.");
+            }
+        } catch (error) { console.error(error); }
+    });
+
+    // --- FUNCIONES DE REPORTES Y UPLOAD ---
     async function uploadPDF(event) {
         const file = event.target.files[0];
         if (!file) return;
-        
         const formData = new FormData();
-        formData.append('charla_id', { charla_id });
+        formData.append('charla_id', "{{ charla_id }}");
         formData.append('pdf_file', file);
-        
-        const token = localStorage.getItem('access_token');
         
         try {
             const response = await fetch('/api/reportes/subir_pdf/', {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
+                headers: { 'Authorization': `Bearer ${localStorage.getItem("access_token")}`, 'X-CSRFToken': '{{ csrf_token }}' },
                 body: formData
             });
-            
+            const data = await response.json();
+            const statusDiv = document.getElementById('reporte-status');
+
             if (response.ok) {
-                const reporte = await response.json();
-                document.getElementById('reporte-status').innerHTML = `
-                    <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-                        ✅ PDF subido exitosamente
-                        <div class="mt-2">
-                            <a href="${reporte.pdf_url}" target="_blank" 
-                               class="text-green-800 font-bold hover:underline">
-                                📥 Ver PDF →
-                            </a>
+                statusDiv.innerHTML = `<div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded flex items-center justify-between shadow-sm">
+                        <span>✅ PDF subido correctamente</span>
+                        <div class="space-x-2">
+                            <button onclick="abrirPreview('${data.pdf_url}')" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition">👁️ Ver</button>
+                            <a href="${data.pdf_url}" download class="bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-700 transition">📥 Bajar</a>
                         </div>
-                    </div>
-                `;
-            } else {
-                const error = await response.json();
-                document.getElementById('reporte-status').innerHTML = `
-                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                        ❌ ${error.error || 'Error al subir el PDF'}
-                    </div>
-                `;
+                    </div>`;
             }
-        } catch (error) {
-            console.error('Error:', error);
-            document.getElementById('reporte-status').innerHTML = `
-                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                    ❌ Error de conexión
-                </div>
-            `;
-        }
+        } catch (error) { console.error(error); }
+    }
+
+    async function generarReporteAutomatico() {
+        const statusDiv = document.getElementById('reporte-status');
+        const token = localStorage.getItem("access_token");
+        statusDiv.innerHTML = `<div class="flex items-center text-blue-600 font-medium bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-3"></div> Generando reporte PDF...</div>`;
+
+        try {
+            const response = await fetch("/api/reportes/generar_pdf/", {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+                body: JSON.stringify({ charla_id: "{{ charla_id }}" })
+            });
+            const data = await response.json();
+            if (response.ok) {
+                statusDiv.innerHTML = `<div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded flex justify-between items-center shadow-sm">
+                        <span>✅ Reporte generado</span>
+                        <div class="space-x-2"><button onclick="abrirPreview('${data.pdf_url}')" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700">👁️ Ver</button>
+                        <a href="${data.pdf_url}" download class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold">📥 Bajar</a></div>
+                    </div>`;
+                abrirPreview(data.pdf_url);
+            }
+        } catch (error) { console.error(error); }
+    }
+
+    // --- VISTA PREVIA ---
+    function abrirPreview(url) {
+        document.getElementById('pdf-frame').src = url;
+        document.getElementById('preview-modal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function cerrarPreview() {
+        document.getElementById('preview-modal').classList.add('hidden');
+        document.getElementById('pdf-frame').src = "";
+        document.body.style.overflow = 'auto';
     }
 </script>
 {% endblock %}

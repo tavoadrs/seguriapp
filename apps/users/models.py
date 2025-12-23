@@ -11,6 +11,15 @@ class Usuario(AbstractUser):
     rut = models.CharField(max_length=12, unique=True)
     rol = models.CharField(max_length=20, choices=ROLES, default='TRABAJADOR')
     
+#Campo agregado para la asignación de trabajadores a un supervisor
+    supervisor = models.ForeignKey(
+        'self', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='trabajadores_a_cargo'
+    )
+
     class Meta:
         verbose_name = 'Usuario'
         verbose_name_plural = 'Usuarios'

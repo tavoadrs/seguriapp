@@ -93,11 +93,22 @@
                 <label class="block text-gray-700 font-medium mb-2">Rol</label>
                 <select 
                     name="rol" 
+                    id="rol-select"
+                    onchange="handleRolChange()"
                     required
                     class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                     <option value="TRABAJADOR">👤 Trabajador</option>
                     <option value="SUPERVISOR">👷 Supervisor</option>
                     <option value="ADMIN">🛡️ Administrador</option>
+                </select>
+            </div>
+            <!-- Modificación en el formulario para el apartado de asignación de supervisor -->
+            <div id="supervisor-container" class="hidden">
+                <label class="block text-gray-700 font-medium mb-2">Asignar Supervisor</label>
+                <select 
+                name="supervisor" 
+                id="supervisor-select"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                 </select>
             </div>
             
@@ -204,6 +215,8 @@
             console.error('Error:', error);
         }
     });
+
+
     
     async function deleteUser(id) {
         if (!confirm('¿Estás seguro de eliminar este usuario?')) return;
@@ -227,6 +240,66 @@
         }
     }
     
+    // Función para mostrar/ocultar y cargar supervisores
+    async function handleRolChange() {
+        const rol = document.getElementById('rol-select').value;
+        const container = document.getElementById('supervisor-container');
+        
+        if (rol === 'TRABAJADOR') {
+            container.classList.remove('hidden');
+            await fetchSupervisors();
+        } else {
+            container.classList.add('hidden');
+            document.getElementById('supervisor-select').value = '';
+        }
+    }
+
+    async function fetchSupervisors() {
+        const token = localStorage.getItem('access_token');
+        try {
+            const response = await fetch('/api/usuarios/', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            const select = document.getElementById('supervisor-select');
+            
+            // Filtramos solo los usuarios con rol SUPERVISOR
+            const supervisors = data.results.filter(u => u.rol === 'SUPERVISOR');
+            
+            select.innerHTML = '<option value="">-- Sin Supervisor --</option>' + 
+                supervisors.map(s => `<option value="${s.id}">${s.first_name} ${s.last_name}</option>`).join('');
+        } catch (error) {
+            console.error('Error cargando supervisores:', error);
+        }
+    }
+
+    // Actualiza showEditModal para cargar el supervisor actual
+    async function showEditModal(user) {
+        editingUserId = user.id;
+        document.getElementById('modal-title').textContent = 'Editar Usuario';
+        document.getElementById('password-input').required = false;
+        
+        const form = document.getElementById('user-form');
+        form.first_name.value = user.first_name;
+        form.last_name.value = user.last_name;
+        form.username.value = user.username;
+        form.email.value = user.email;
+        form.rut.value = user.rut;
+        form.rol.value = user.rol;
+        form.password.value = '';
+
+        // Manejar visibilidad del supervisor
+        if (user.rol === 'TRABAJADOR') {
+            await fetchSupervisors();
+            document.getElementById('supervisor-container').classList.remove('hidden');
+            document.getElementById('supervisor-select').value = user.supervisor || '';
+        } else {
+            document.getElementById('supervisor-container').classList.add('hidden');
+        }
+        
+        document.getElementById('user-modal').classList.remove('hidden');
+    }
+
     // Render usuarios list
     document.body.addEventListener('htmx:afterSwap', function(evt) {
         if (evt.detail.target.id === 'usuarios-list') {
@@ -260,6 +333,13 @@
                                         }">
                                             ${user.rol === 'ADMIN' ? '🛡️' : user.rol === 'SUPERVISOR' ? '👷' : '👤'} ${user.rol}
                                         </span>
+
+                                        ${user.rol === 'TRABAJADOR' && user.supervisor ? `
+                                            <div class="mt-2 flex items-center text-[10px] text-gray-500 font-semibold uppercase tracking-wider">
+                                                <span class="mr-1">Jefe:</span>
+                                                <span class="text-blue-600">${user.supervisor_nombre || 'Asignado (ID: ' + user.supervisor + ')'}</span>
+                                            </div>
+                                        ` : ''}
                                     </td>
                                     <td class="px-6 py-4 text-sm space-x-2">
                                         <button 

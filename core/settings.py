@@ -17,7 +17,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['*','localhost','127.0.0.1','subservient-spatteringly-shanice.ngrok-free.dev']
 
 
 
@@ -167,7 +167,26 @@ FIREBASE_STORAGE_BUCKET = os.getenv('FIREBASE_STORAGE_BUCKET', default='')
 
 # Security
 SECURE_BROWSER_XSS_FILTER = True
-X_FRAME_OPTIONS = 'DENY'
+X_FRAME_OPTIONS = 'SAMEORIGIN'
 SECURE_CONTENT_TYPE_NOSNIFF = True
 
 LOGIN_URL = '/login'
+
+# Permite que las peticiones desde ngrok sean aceptadas
+CSRF_TRUSTED_ORIGINS = [
+'https://subservient-spatteringly-shanice.ngrok-free.dev',
+'http://127.0.0.1:8000'
+
+]
+
+
+# Configuración de cookies para túneles HTTPS
+#SESSION_COOKIE_DOMAIN = '.ngrok-free.dev'
+# Configuración de seguridad para túneles HTTPS(HIGH)
+# Esto le dice al navegador que está bien enviar la sesión a través del túnel
+SESSION_COOKIE_SAMESITE = 'None'
+SESSION_COOKIE_SECURE = True  # Solo si usas HTTPS en ngrok
+CSRF_COOKIE_SAMESITE = 'None'
+CSRF_COOKIE_SECURE = True
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

@@ -59,7 +59,7 @@ urlpatterns = [
     
     # Cuestionarios
     path('cuestionarios/crear',views.crear_cuestionario, name= 'crear_cuestionario'),
-
+    path('cuestionarios/detalle', views.detalle_cuestionario, name='detalle_cuestionario'),
     # Usuarios
     path('usuarios/', views.gestionar_usuarios, name='gestionar_usuarios'),
     

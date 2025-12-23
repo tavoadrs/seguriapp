@@ -2,6 +2,12 @@ from django.db import models
 from django.conf import settings
 
 class Charla(models.Model):
+
+    ESTADOS = (
+        ('BORRADOR', 'En Repertorio'),
+        ('ENVIADA', 'Enviada'),
+    )
+    
     tema = models.CharField(max_length=255)
     fecha = models.DateField()
     hora = models.TimeField()
@@ -21,6 +27,20 @@ class Charla(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
+    estado = models.CharField(
+        max_length=20, 
+        choices=ESTADOS, 
+        default='BORRADOR'
+    )
+
+    #cödigo para saber quien ha firmado la charla
+    firmas = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        through='asistencias.Asistencia', # Usa tu modelo de asistencias existente
+        related_name='charlas_firmadas',
+        blank=True
+    )
+
     class Meta:
         verbose_name = 'Charla'
         verbose_name_plural = 'Charlas'
